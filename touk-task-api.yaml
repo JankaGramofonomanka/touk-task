@@ -32,7 +32,7 @@ paths:
           schema:
             $ref: '#/components/schemas/Date'
           
-        - name: time-from
+        - name: from
           in: query
           description: 
             beginning of the time interval in which the listed screenings 
@@ -40,7 +40,7 @@ paths:
           schema:
             $ref: '#/components/schemas/Hour'
             
-        - name: time-to
+        - name: to
           in: query
           description: 
             end of the time interval in which the listed screenings start

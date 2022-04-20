@@ -10,6 +10,6 @@ GET     /                           controllers.HomeController.index()
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
 
 
-GET     /screenings                 controllers.HomeController.screenings()
+GET     /screenings                 controllers.HomeController.screenings(date, from, to)
 GET     /screenings/:id             controllers.HomeController.getScreening(id: String)
 POST    /screenings/:id             controllers.HomeController.postScreening(id: String)
