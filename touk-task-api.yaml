@@ -36,14 +36,14 @@ paths:
           in: query
           description: 
             beginning of the time interval in which the listed screenings 
-            start
+            take place
           schema:
             $ref: '#/components/schemas/Hour'
             
         - name: to
           in: query
           description: 
-            end of the time interval in which the listed screenings start
+            end of the time interval in which the listed screenings take place
           schema:
             $ref: '#/components/schemas/Hour'
             
@@ -166,10 +166,9 @@ components:
           example: "Scarface"
         
         start-time:
-          type: string
-          description: time at which the screening starts
-          format: HH:MM
-          example: "16:45"
+          allOf:
+            - $ref: '#/components/schemas/Hour'
+            - description: time at which the screening starts
         
         duration:
           type: integer

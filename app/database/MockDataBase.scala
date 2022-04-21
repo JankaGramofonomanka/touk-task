@@ -2,29 +2,11 @@ package database
 
 import com.github.nscala_time.time.Imports._
 
+import lib.DataDefs._
 
 object MockDataBase {
 
-  type ScreeningId  = String
-  type RoomId       = Int
-  type RowId        = Int
-  type ColumnId     = Int
-  type Seat         = (RowId, ColumnId)
-
-  final case class Person(name: String, surname: String)
-
-  final case class ScreeningInfo(
-    title:    String,
-    start:    DateTime,
-    duration: Duration,
-    room:     RoomId,
-  )
-
-  final case class Reservation(
-    screening:  ScreeningId,
-    seats:      List[Seat],
-    reserver:   Person,
-  )
+  
 
     
   val rooms: Map[RoomId, (Int, Int)] = Map(
@@ -65,10 +47,10 @@ object MockDataBase {
         2
       ),
 
-    "12angrypeople" -> ScreeningInfo(
+    "12angrymen" -> ScreeningInfo(
         "12 Angry People",
         new DateTime(2022, 4, 30, 16, 0),
-        95.minutes,
+        96.minutes,
         3
       ),
 
@@ -128,13 +110,13 @@ object MockDataBase {
     ),
 
     Reservation(
-      "12angrypeople",
+      "12angrymen",
       List((8, 4)),
       Person("John", "Galt")
     ),
 
     Reservation(
-      "12angrypeople",
+      "12angrymen",
       List((8, 5)),
       Person("Henry", "Rearden")
     ),

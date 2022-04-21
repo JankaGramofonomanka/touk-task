@@ -5,6 +5,11 @@ import play.api._
 import play.api.mvc._
 import play.api.libs.json._
 
+import scala.util.{Failure, Success, Try}
+
+import com.github.nscala_time.time.Imports._
+
+import lib.DataDefs._
 import database.MockDataBase
 
 
@@ -26,12 +31,30 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     Ok(views.html.index())
   }
 
+
+
+
   def screenings(date: String, from: String, to: String) = Action { implicit request => 
+    val startStr = s"$date $from"
+    val endStr = s"$date $to"
     
-    Ok(Json.arr(
-      Json.obj("key" -> "val"),
-      Json.obj("val" -> "key"),
-    ))
+    val interval = for {
+      start <- Try(DateTimeFormat.forPattern("dd-MM-yyyy HH:mm").parseDateTime(startStr))
+      end   <- Try(DateTimeFormat.forPattern("dd-MM-yyyy HH:mm").parseDateTime(endStr))
+    } yield (start, end)
+
+    interval match {
+      case Failure(error) => Status(400)("Invalid parameters")
+      
+      case Success((start, end)) => {
+        val screenings = MockDataBase.screenings.toList.filter(
+          t => start <= t._2.start && t._2.start + t._2.duration <= end
+        )
+
+        val screeningInfos = screenings.map(t => screeningInfoBasic(t._1, t._2))
+        Ok(Json.toJson(screeningInfos))
+      }
+    }
   }
 
   def getScreening(id: String) = Action { _ =>
@@ -41,4 +64,6 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
   def postScreening(id: String) = Action(parse.json) { implicit request =>
     Ok(Json.obj("received" -> Json.toJson(request.body)))
   }
+
+  
 }
