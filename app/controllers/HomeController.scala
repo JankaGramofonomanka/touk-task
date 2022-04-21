@@ -10,7 +10,7 @@ import scala.util.{Failure, Success, Try}
 import com.github.nscala_time.time.Imports._
 
 import lib.DataDefs._
-import database.MockDataBase
+import lib.MockDataBase
 
 
 /**
@@ -33,7 +33,7 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
 
 
 
-
+  // ----------------------------------------------------------------------------------------------
   def screenings(date: String, from: String, to: String) = Action { implicit request => 
     val startStr = s"$date $from"
     val endStr = s"$date $to"
@@ -57,18 +57,13 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     }
   }
 
+  // ----------------------------------------------------------------------------------------------
   def getScreening(screeningId: String) = Action { _ =>
     Ok(Json.obj("key" -> "val", "val" -> "key", "id" -> screeningId))
 
-    val getScreening: ScreeningId => Either[(Int, String), ScreeningInfo] = id => {
-      MockDataBase.screenings.get(id) match {
-        case None       => Left((404, "screening with given id does not exist"))
-        case Some(info) => Right(info)
-      }
-    }
-
     val result = for {
-      info <- getScreening(screeningId)
+      info <- MockDataBase.screenings.get(screeningId).toRight(
+        (404, "screening with given id does not exist"))
       moreInfo <- screeningInfo(screeningId, info, getAvailibleSeats(_, _))
     } yield moreInfo
 
@@ -78,31 +73,28 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     }
   }
 
-  def postScreening(id: String) = Action(parse.json) { implicit request =>
+  // ----------------------------------------------------------------------------------------------
+  def postScreening(screeningId: String) = Action(parse.json) { implicit request =>
     Ok(Json.obj("received" -> Json.toJson(request.body)))
   }
 
+  // ----------------------------------------------------------------------------------------------
   def getAvailibleSeats(
     screeningId: ScreeningId,
     room: RoomId
-  ): Either[(Int, String), List[Seat]] = {
+  ): Either[Error, List[Seat]] = for {
 
-    val roomData = MockDataBase.rooms.get(room)
-    roomData match {
-      case None => Left((500, "Inconsistent data"))
+    dim <- MockDataBase.rooms.get(room).toRight((500, "Inconsistent data"))
+    
+    allRows = (1 to dim.numRows).toList
+    allColumns = (1 to dim.numColumns).toList
+    allSeats = allRows.flatMap(n => allColumns.map((n, _)))
 
-      case Some((numRows, numColumns)) => {
-        
-        val allRows = (1 to numRows).toList
-        val allColumns = (1 to numColumns).toList
-        val allSeats = allRows.flatMap(n => allColumns.map((n, _)))
+    reservations = MockDataBase.reservations.filter(_.screening == screeningId)
+    reservedSeats = reservations.flatMap(_.seats)
+    availibleSeats = allSeats.filterNot(reservations.contains)
 
-        val reservations = MockDataBase.reservations.filter(_.screening == screeningId)
-        val reservedSeats = reservations.flatMap(_.seats)
-        val availibleSeats = allSeats.filterNot(reservations.contains)
-
-        Right(availibleSeats)
-      }
-    }
-  }
+    
+  } yield availibleSeats
+  
 }

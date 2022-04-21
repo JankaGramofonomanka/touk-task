@@ -10,6 +10,9 @@ object DataDefs {
   type RowId        = Int
   type ColumnId     = Int
   type Seat         = (RowId, ColumnId)
+  type Error        = (Int, String)
+
+  final case class RoomDimmension(numRows: Int, numColumns: Int)
 
   final case class Person(name: String, surname: String)
 
@@ -41,8 +44,9 @@ object DataDefs {
   def screeningInfo(
     screeningId: ScreeningId,
     info: ScreeningInfo,
-    getAvailibleSeats: (ScreeningId, RoomId) => Either[(Int, String), List[Seat]],
-  ): Either[(Int, String), JsObject] = for {
+    getAvailibleSeats: (ScreeningId, RoomId) => Either[Error, List[Seat]],
+  ): Either[Error, JsObject] = for {
+
     basicInfo <- Right(screeningInfoBasic(screeningId, info))
     seats <- getAvailibleSeats(screeningId, info.room).map(Json.toJson(_))
     

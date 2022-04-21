@@ -1,4 +1,4 @@
-package database
+package lib
 
 import com.github.nscala_time.time.Imports._
 
@@ -9,10 +9,10 @@ object MockDataBase {
   
 
   //                      rows  columns
-  val rooms: Map[RoomId, (Int,  Int)] = Map(
-      1 -> (15, 20),
-      2 -> (10, 15),
-      3 -> (10, 10),
+  val rooms: Map[RoomId, RoomDimmension] = Map(
+      1 -> RoomDimmension(15, 20),
+      2 -> RoomDimmension(10, 15),
+      3 -> RoomDimmension(10, 10),
   )
 
 
