@@ -57,13 +57,52 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     }
   }
 
-  def getScreening(id: String) = Action { _ =>
-    Ok(Json.obj("key" -> "val", "val" -> "key", "id" -> id))
+  def getScreening(screeningId: String) = Action { _ =>
+    Ok(Json.obj("key" -> "val", "val" -> "key", "id" -> screeningId))
+
+    val getScreening: ScreeningId => Either[(Int, String), ScreeningInfo] = id => {
+      MockDataBase.screenings.get(id) match {
+        case None       => Left((404, "screening with given id does not exist"))
+        case Some(info) => Right(info)
+      }
+    }
+
+    val result = for {
+      info <- getScreening(screeningId)
+      moreInfo <- screeningInfo(screeningId, info, getAvailibleSeats(_, _))
+    } yield moreInfo
+
+    result match {
+      case Left((errorCode, errorMsg)) => Status(errorCode)(errorMsg)
+      case Right(info) => Ok(info)
+    }
   }
 
   def postScreening(id: String) = Action(parse.json) { implicit request =>
     Ok(Json.obj("received" -> Json.toJson(request.body)))
   }
 
-  
+  def getAvailibleSeats(
+    screeningId: ScreeningId,
+    room: RoomId
+  ): Either[(Int, String), List[Seat]] = {
+
+    val roomData = MockDataBase.rooms.get(room)
+    roomData match {
+      case None => Left((500, "Inconsistent data"))
+
+      case Some((numRows, numColumns)) => {
+        
+        val allRows = (1 to numRows).toList
+        val allColumns = (1 to numColumns).toList
+        val allSeats = allRows.flatMap(n => allColumns.map((n, _)))
+
+        val reservations = MockDataBase.reservations.filter(_.screening == screeningId)
+        val reservedSeats = reservations.flatMap(_.seats)
+        val availibleSeats = allSeats.filterNot(reservations.contains)
+
+        Right(availibleSeats)
+      }
+    }
+  }
 }

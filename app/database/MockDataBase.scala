@@ -8,10 +8,10 @@ object MockDataBase {
 
   
 
-    
-  val rooms: Map[RoomId, (Int, Int)] = Map(
-      1 -> (20, 15),
-      2 -> (15, 10),
+  //                      rows  columns
+  val rooms: Map[RoomId, (Int,  Int)] = Map(
+      1 -> (15, 20),
+      2 -> (10, 15),
       3 -> (10, 10),
   )
 

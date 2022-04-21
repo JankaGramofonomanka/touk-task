@@ -26,7 +26,7 @@ object DataDefs {
     reserver:   Person,
   )
 
-  def screeningInfoBasic(screeningId: ScreeningId, info: ScreeningInfo): JsValue = {
+  def screeningInfoBasic(screeningId: ScreeningId, info: ScreeningInfo): JsObject = {
     val startHour = info.start.toLocalTime.getHourOfDay
     val startMinute = info.start.toLocalTime.getMinuteOfHour
 
@@ -37,4 +37,14 @@ object DataDefs {
       "duration"    -> info.duration.toStandardMinutes.getMinutes,
     )
   }
+
+  def screeningInfo(
+    screeningId: ScreeningId,
+    info: ScreeningInfo,
+    getAvailibleSeats: (ScreeningId, RoomId) => Either[(Int, String), List[Seat]],
+  ): Either[(Int, String), JsObject] = for {
+    basicInfo <- Right(screeningInfoBasic(screeningId, info))
+    seats <- getAvailibleSeats(screeningId, info.room).map(Json.toJson(_))
+    
+  } yield basicInfo + ("room" -> Json.toJson(info.room)) + ("availible-seats" -> Json.toJson(seats))
 }
