@@ -93,62 +93,74 @@ object MockDataBase {
   val reservations: List[Reservation] = List(
     Reservation(
       "scarface_1",
-      List((15, 10), (15, 11), (15, 12)),
+      Map((15, 10) -> Child, (15, 11) -> Adult, (15, 12) -> Child),
       Person("Don", "Corleone")
     ),
     
     Reservation(
       "scarface_1",
-      List((15, 6), (15, 7), (15, 8), (15, 9)),
+      Map((15, 6) -> Student, (15, 7) -> Adult, (15, 8) -> Adult, (15, 9) -> Child),
       Person("John", "Smith")
     ),
     
     Reservation(
       "scarface_2",
-      List((10, 8), (10, 9), (10, 10)),
+      Map((10, 8) -> Student, (10, 9) -> Student, (10, 10) -> Student),
       Person("Buck", "Rodgers")
     ),
 
     Reservation(
       "12angrymen",
-      List((8, 4)),
+      Map((8, 4) -> Adult),
       Person("John", "Galt")
     ),
 
     Reservation(
       "12angrymen",
-      List((8, 5)),
+      Map((8, 5) -> Adult),
       Person("Henry", "Rearden")
     ),
 
     Reservation(
       "shrek_1",
-      List((8, 5), (8, 6), (8, 7), (9, 6), (9, 7)),
-      Person("Bugs", "Bunny")
+      Map((8, 5) -> Child, (8, 6) -> Child, (8, 7) -> Adult, (9, 6) -> Child, (9, 7) -> Child),
+      Person("Michael", "Jackson")
     ),
 
     Reservation(
       "shrek_3",
-      List((7, 8), (7, 9), (7, 10)),
+      Map((7, 8) -> Child, (7, 9) -> Child, (7, 10) -> Adult),
       Person("Bugs", "Bunny")
     ),
 
     Reservation(
       "shrek_4",
-      List((7, 8), (7, 9)),
+      Map((7, 8) -> Child, (7, 9) -> Adult),
       Person("Mao", "Tse-Tung")
     ),
 
     Reservation(
       "shrek_2",
-      List((1, 4), (1, 5), (1, 6)),
+      Map((1, 4) -> Adult, (1, 5) -> Child, (1, 6) -> Adult),
       Person("Antonio", "Montana")
     ),
 
     Reservation(
       "pulpfiction",
-      List((1, 4), (1, 5), (1, 6)),
+      Map((1, 4) -> Adult, (1, 5) -> Student, (1, 6) -> Student),
       Person("Betty", "Boop")
+    ),
+
+    Reservation(
+      "fastandfurious24_1",
+      Map((1, 10) -> Adult),
+      Person("Ray", "Charles")
+    ),
+
+    Reservation(
+      "fastandfurious24_2",
+      Map((8, 5) -> Adult, (8, 6) -> Adult, (8, 7) -> Adult, (9, 6) -> Adult, (9, 7) -> Adult),
+      Person("The", "Pope")
     ),
 
   )

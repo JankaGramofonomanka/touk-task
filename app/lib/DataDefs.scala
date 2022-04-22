@@ -12,6 +12,11 @@ object DataDefs {
   type Seat         = (RowId, ColumnId)
   type Error        = (Int, String)
 
+  sealed trait TicketType
+  final object Adult extends TicketType
+  final object Student extends TicketType
+  final object Child extends TicketType
+
   final case class RoomDimmension(numRows: Int, numColumns: Int)
 
   final case class Person(name: String, surname: String)
@@ -25,7 +30,7 @@ object DataDefs {
 
   final case class Reservation(
     screening:  ScreeningId,
-    seats:      List[Seat],
+    seats:      Map[Seat, TicketType],
     reserver:   Person,
   )
 
