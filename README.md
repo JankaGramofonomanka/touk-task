@@ -7,4 +7,5 @@ The application will be implemented with accordance to the API defined in
 `touk-task-api.yaml`
 
 ## Assumptions
-- I assume, all screenings end before 12:00 PM.
+- All screenings end before 12:00 PM.
+- Screening rooms are rectangular, that is all rows have the same number of seats

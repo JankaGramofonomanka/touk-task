@@ -110,7 +110,9 @@ paths:
         
         '400': 
           description: 
-            invalid screeningId or data, or reservation not successfull
+              invalid request body
+            / seats alredy taken
+            / seats left untaken between two reserved seats
         
         '404': 
           description: screening with given id does not exist
