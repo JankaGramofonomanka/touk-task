@@ -63,9 +63,9 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     Ok(Json.obj("key" -> "val", "val" -> "key", "id" -> screeningId))
 
     val result = for {
-      info <- MockDataBase.screenings.get(screeningId).toRight(
-        (404, "screening with given id does not exist"))
-      moreInfo <- screeningInfo(screeningId, info, getAvailableSeats(_, _).map(_.seats))
+      info <- getScreeningInfo(screeningId)
+      
+      moreInfo <- screeningInfo(screeningId, info, getRoomDimension, getReservations)
     } yield moreInfo
 
     result match {
@@ -81,9 +81,8 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     val result = for {
       reservation <- processReservationData(screeningId, request.body).toRight((400, "invalid request body"))
 
-      info <- MockDataBase.screenings.get(screeningId).toRight(
-        (404, "screening with given id does not exist"))
-      takenSeats <- getTakenSeats(screeningId, info.room)
+      info <- getScreeningInfo(screeningId)
+      takenSeats <- getTakenSeats(screeningId, info.room, getRoomDimension, getReservations)
       requestedSeats = reservation.seats.keys.toList
       
       _ <- Either.cond(
@@ -112,26 +111,14 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
   }
 
   // ----------------------------------------------------------------------------------------------
-  def getAvailableSeats(
-    screeningId: ScreeningId,
-    room: RoomId
-  ): Either[Error, AvailableSeats] = for {
-
-    takenSeats <- getTakenSeats(screeningId, room)
-    availableSeats = getAvailableSeatsArray(takenSeats.dim, takenSeats.seats)
-    
-  } yield AvailableSeats(takenSeats.dim, availableSeats)
-
-  def getTakenSeats(
-    screeningId: ScreeningId,
-    room: RoomId,
-  ): Either[Error, TakenSeats] = for {
-
-    dim <- MockDataBase.rooms.get(room).toRight((500, "Inconsistent data"))
-
-    reservations = MockDataBase.reservations.filter(_.screening == screeningId)
-    reservedSeats = reservations.flatMap(_.seats.keys)
-
-  } yield TakenSeats(dim, reservedSeats)
+  def getReservations(screeningId: ScreeningId): List[Reservation]
+    = MockDataBase.reservations.filter(_.screening == screeningId)
   
+  def getRoomDimension(roomId: RoomId): Either[Error, RoomDimension]
+    = MockDataBase.rooms.get(roomId).toRight((500, "Inconsistent data"))
+  
+  def getScreeningInfo(screeningId: ScreeningId): Either[Error, ScreeningInfo]
+    = MockDataBase.screenings.get(screeningId).toRight(
+        (404, "screening with given id does not exist")
+      )
 }

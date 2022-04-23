@@ -37,13 +37,27 @@ object Lib {
   def screeningInfo(
     screeningId: ScreeningId,
     info: ScreeningInfo,
-    getAvailibleSeats: (ScreeningId, RoomId) => Either[Error, List[List[ColumnId]]],
+    getRoomDimension: RoomId => Either[Error, RoomDimension],
+    getReservations: ScreeningId => List[Reservation],
   ): Either[Error, JsObject] = for {
 
-    basicInfo <- Right(screeningInfoBasic(screeningId, info))
-    seats <- getAvailibleSeats(screeningId, info.room).map(Json.toJson(_))
     
-  } yield basicInfo + ("room" -> Json.toJson(info.room)) + ("availible-seats" -> Json.toJson(seats))
+    availableSeats <- getAvailableSeats(
+      screeningId,
+      info.room,
+      getRoomDimension,
+      getReservations
+    )
+
+    basicInfo = screeningInfoBasic(screeningId, info)
+
+    result = (
+      basicInfo
+      + ("room" -> Json.toJson(info.room))
+      + ("availible-seats" -> Json.toJson(availableSeats.seats))
+    )
+    
+  } yield result
 
 
   def processReservationData(
@@ -89,6 +103,37 @@ object Lib {
 
 
   // Seats ----------------------------------------------------------------------------------------
+  def getAvailableSeats(
+    screeningId: ScreeningId,
+    roomId: RoomId,
+    getRoomDimension: RoomId => Either[Error, RoomDimension],
+    getReservations: ScreeningId => List[Reservation],
+  ): Either[Error, AvailableSeats] = for {
+
+    takenSeats <- getTakenSeats(
+      screeningId,
+      roomId,
+      getRoomDimension,
+      getReservations
+    )
+    availableSeats = getAvailableSeatsArray(takenSeats.dim, takenSeats.seats)
+    
+  } yield AvailableSeats(takenSeats.dim, availableSeats)
+
+  def getTakenSeats(
+    screeningId: ScreeningId,
+    roomId: RoomId,
+    getRoomDimension: RoomId => Either[Error, RoomDimension],
+    getReservations: ScreeningId => List[Reservation],
+
+  ): Either[Error, TakenSeats] = for {
+
+    dim <- getRoomDimension(roomId)
+    reservations = getReservations(screeningId)
+    reservedSeats = reservations.flatMap(_.seats.keys)
+
+  } yield TakenSeats(dim, reservedSeats)
+  
   def getAllSeatsArray(dim: RoomDimension): List[List[ColumnId]] = {
     (1 to dim.numRows).toList.map(_ => (1 to dim.numColumns).toList)
   }
