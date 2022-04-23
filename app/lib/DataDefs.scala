@@ -17,7 +17,7 @@ object DataDefs {
 
   final case class RoomDimension(numRows: Int, numColumns: Int)
   
-  final case class AvailableSeats(dim: RoomDimension, seats: List[Seat])
+  final case class AvailableSeats(dim: RoomDimension, seats: List[List[ColumnId]])
   final case class TakenSeats(dim: RoomDimension, seats: List[Seat])
 
   final case class Person(name: String, surname: String)

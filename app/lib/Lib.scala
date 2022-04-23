@@ -37,7 +37,7 @@ object Lib {
   def screeningInfo(
     screeningId: ScreeningId,
     info: ScreeningInfo,
-    getAvailibleSeats: (ScreeningId, RoomId) => Either[Error, List[Seat]],
+    getAvailibleSeats: (ScreeningId, RoomId) => Either[Error, List[List[ColumnId]]],
   ): Either[Error, JsObject] = for {
 
     basicInfo <- Right(screeningInfoBasic(screeningId, info))
@@ -115,19 +115,19 @@ object Lib {
   def getAvailableSeatsArray(
     dim: RoomDimension,
     reservedSeats: List[Seat],
-  ): List[List[ColumnId]] = seatListToArray(dim, reservedSeats)
+  ): List[List[ColumnId]] = {
+    
+    val allSeats = getAllSeatsArray(dim)
+    val takenSeats = getTakenSeatsArray(dim, reservedSeats)
+
+    val availableSeats = allSeats.zip(takenSeats).map(t => t._1.filterNot(t._2.contains))
+    availableSeats
+  }
 
   def getTakenSeatsArray(
     dim: RoomDimension,
     reservedSeats: List[Seat],
-  ): List[List[ColumnId]] = {
-    
-    val allSeats = getAllSeatsArray(dim)
-    val availibleSeats = getAvailableSeatsArray(dim, reservedSeats)
-
-    val takenSeats = allSeats.zip(availibleSeats).map(t => t._1.filterNot(t._2.contains))
-    takenSeats
-  }
+  ): List[List[ColumnId]] = seatListToArray(dim, reservedSeats)
 
   def seatListToArray(
     dim: RoomDimension,
@@ -135,7 +135,7 @@ object Lib {
   ): List[List[ColumnId]] = {
     val rowNums = (1 to dim.numRows).toList
     val seatsDividedByRow = rowNums.map(r => seatList.filter(_._1 == r))
-    val seatArray = seatsDividedByRow.map(row => row.map(seat => seat._2))
+    val seatArray = seatsDividedByRow.map(row => row.map(seat => seat._2).sorted)
     seatArray
   }
 

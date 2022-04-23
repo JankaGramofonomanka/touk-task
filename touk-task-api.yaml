@@ -3,7 +3,7 @@ info:
   description: |
     An API for an application for reserving seats in a cinema
   version: "1.0.0"
-  title: touk-task-api
+  title: touk-task-api 
   termsOfService: 'http://swagger.io/terms/'
   contact:
     email: janserwatka@outlook.io
@@ -110,9 +110,7 @@ paths:
         
         '400': 
           description: 
-              invalid request body
-            / seats alredy taken
-            / seats left untaken between two reserved seats
+            invalid request body / reservation not successfull
         
         '404': 
           description: screening with given id does not exist
@@ -191,21 +189,38 @@ components:
               description: Number of the screening room
               
             availible-seats:
-              $ref: '#/components/schemas/SeatArray'
+              $ref: '#/components/schemas/SeatsInRoom'
     
     Seat:
-      type: string
-      format:
-        a string in the form "{row-letter}{seat-number}", 
-        rows after row "Z" are numbered with two letters ("AA", "AB", "AC", ...)
-      example: "C12"
-    
-    SeatArray:
       type: array
       items:
-        $ref: '#/components/schemas/Seat'
-        
-      example: ["A1", "A12", "B7", "C10", "Z20", "AA11", "AB1"]
+        type: integer
+      
+      format: two-element array
+      example: [10, 12]
+      
+    SeatsInRow:
+      type: array
+      items:
+        type: integer
+      
+      description: array of available seat numbers in the row
+      example: [1, 2, 3, 8, 9, 10]
+    
+    SeatsInRoom:
+      type: array
+      items:
+        $ref: '#/components/schemas/SeatsInRow'
+          
+      description: an array of rows of available seats
+      example: 
+        [
+          [1, 2, 10],
+          [1, 2, 3, 8, 9, 10],
+          [1, 2, 3, 7, 8, 9, 10],
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        ]
     
     SeatDict:
       type: array
@@ -228,10 +243,10 @@ components:
         
       example: 
         [
-          {"seat": "D11", "ticket": "adult"},
-          {"seat": "D12", "ticket": "adult"},
-          {"seat": "D13", "ticket": "child"},
-          {"seat": "D14", "ticket": "student"},
+          {"seat": [5, 11], "ticket": "adult"},
+          {"seat": [5, 12], "ticket": "adult"},
+          {"seat": [5, 13], "ticket": "child"},
+          {"seat": [5, 14], "ticket": "student"},
         ]
     
     ReservationData:

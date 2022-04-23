@@ -118,7 +118,7 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
   ): Either[Error, AvailableSeats] = for {
 
     takenSeats <- getTakenSeats(screeningId, room)
-    availableSeats = getAvailableSeatsList(takenSeats.dim, takenSeats.seats)
+    availableSeats = getAvailableSeatsArray(takenSeats.dim, takenSeats.seats)
     
   } yield AvailableSeats(takenSeats.dim, availableSeats)
 
