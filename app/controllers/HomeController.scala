@@ -45,7 +45,7 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     } yield (start, end)
 
     interval match {
-      case Failure(error) => Status(400)("Invalid parameters")
+      case Failure(error) => errorResponse(InvalidParameters)
       
       case Success((start, end)) => {
         val screenings = MockDataBase.screenings.toList.filter(
@@ -69,8 +69,8 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     } yield moreInfo
 
     result match {
-      case Left((errorCode, errorMsg)) => Status(errorCode)(errorMsg)
-      case Right(info) => Ok(info)
+      case Left(error)  => errorResponse(error)
+      case Right(info)  => Ok(info)
     }
   }
 
@@ -79,7 +79,7 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
 
     
     val result = for {
-      reservation <- processReservationData(screeningId, request.body).toRight((400, "invalid request body"))
+      reservation <- processReservationData(screeningId, request.body).toRight(InvalidBody)
 
       info <- getScreeningInfo(screeningId)
       takenSeats <- getTakenSeats(screeningId, info.room, getRoomDimension, getReservations)
@@ -88,14 +88,14 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
       _ <- Either.cond(
         takenSeats.seats.intersect(requestedSeats).isEmpty,
         (),
-        (400, "seats alredy taken")
+        SeatsAlredyTaken
       )
 
       takenSeatsAfterReservation = seatListToArray(takenSeats.dim, takenSeats.seats ++ requestedSeats)
       _ <- Either.cond(
-        seatsPacked(takenSeatsAfterReservation),
+        seatsConnected(takenSeatsAfterReservation),
         (),
-        (400, "seats left untaken between two reserved seats")
+        SeatsNotConnected
       )
 
       price = reservation.seats.values.map(ticketPrice(_)).sum
@@ -103,8 +103,8 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     } yield price
 
     result match {
-      case Left((errorCode, errorMsg))  => Status(errorCode)(errorMsg)
-      case Right(price)                 => Ok(Json.obj("price" -> price))
+      case Left(error)  => errorResponse(error)
+      case Right(price) => Ok(Json.obj("price" -> price))
     }
     
     
@@ -115,10 +115,8 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     = MockDataBase.reservations.filter(_.screening == screeningId)
   
   def getRoomDimension(roomId: RoomId): Either[Error, RoomDimension]
-    = MockDataBase.rooms.get(roomId).toRight((500, "Inconsistent data"))
+    = MockDataBase.rooms.get(roomId).toRight(InconsistentData)
   
   def getScreeningInfo(screeningId: ScreeningId): Either[Error, ScreeningInfo]
-    = MockDataBase.screenings.get(screeningId).toRight(
-        (404, "screening with given id does not exist")
-      )
+    = MockDataBase.screenings.get(screeningId).toRight(NoSuchScreening)
 }

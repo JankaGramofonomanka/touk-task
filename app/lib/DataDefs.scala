@@ -8,12 +8,21 @@ object DataDefs {
   type RowId        = Int
   type ColumnId     = Int
   type Seat         = (RowId, ColumnId)
-  type Error        = (Int, String)
+
+
+  sealed trait Error
+  final object InvalidParameters  extends Error
+  final object SeatsAlredyTaken   extends Error
+  final object SeatsNotConnected  extends Error
+  final object InconsistentData   extends Error
+  final object NoSuchScreening    extends Error
+  final object InvalidBody        extends Error
+
 
   sealed trait TicketType
-  final object Adult extends TicketType
-  final object Student extends TicketType
-  final object Child extends TicketType
+  final object Adult    extends TicketType
+  final object Student  extends TicketType
+  final object Child    extends TicketType
 
   final case class RoomDimension(numRows: Int, numColumns: Int)
   

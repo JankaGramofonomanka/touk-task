@@ -1,5 +1,7 @@
 package lib
 
+import play.api.mvc._
+import play.api.mvc.Results._
 import play.api.libs.json._
 import cats.implicits._
 
@@ -20,6 +22,18 @@ object Lib {
     case "child"    => Some(Child)
     case _          => None
   }
+
+  
+  def errorResponse(error: Error): Result = error match {
+    case InvalidParameters  => Status(400)("invalid parameters")
+    case SeatsAlredyTaken   => Status(400)("seats alredy taken")
+    case SeatsNotConnected  => Status(400)("seats left untaken between two reserved seats")
+    case InconsistentData   => Status(500)("inconsistent data")
+    case NoSuchScreening    => Status(404)("screening with given id does not exist")
+    case InvalidBody        => Status(400)("invalid request body")
+  }
+  
+  
 
   // Json -----------------------------------------------------------------------------------------
   def screeningInfoBasic(screeningId: ScreeningId, info: ScreeningInfo): JsObject = {
@@ -184,7 +198,7 @@ object Lib {
     seatArray
   }
 
-  def seatsPacked(seats: List[List[ColumnId]]): Boolean = {
+  def seatsConnected(seats: List[List[ColumnId]]): Boolean = {
     val rowConnected: List[ColumnId] => Boolean = row => {
       val rowSorted = row.sorted
       rowSorted match {
