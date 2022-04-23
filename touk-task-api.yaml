@@ -146,7 +146,7 @@ components:
     Date:
       type: string
       format: DD-MM-YYYY
-      example: "30-12-1905"
+      example: "30-12-1983"
 
     ScreeningInfoBasic:
       type: object
@@ -166,9 +166,8 @@ components:
           example: "Scarface"
         
         start-time:
-          allOf:
-            - $ref: '#/components/schemas/Hour'
-            - description: time at which the screening starts
+          $ref: '#/components/schemas/Hour'
+              
         
         duration:
           type: integer
@@ -180,13 +179,30 @@ components:
         - $ref: '#/components/schemas/ScreeningInfoBasic'
         - type: object
           required:
+            - date
             - room
+            - rows
+            - seats-per-row
             - availible-seats
           
           properties:
+            date:
+              $ref: '#/components/schemas/Date'
+            
             room:
               type: integer
               description: Number of the screening room
+              example: 3
+              
+            rows:
+              type: integer
+              description: Number of rows in the screening room
+              example: 5
+            
+            seats-per-row:
+              type: integer
+              description: Number of seats per row in the screening room
+              example: 10
               
             availible-seats:
               $ref: '#/components/schemas/SeatsInRoom'

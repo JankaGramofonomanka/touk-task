@@ -5,6 +5,8 @@ import play.api.mvc.Results._
 import play.api.libs.json._
 import cats.implicits._
 
+import com.github.nscala_time.time.Imports._
+
 import lib.DataDefs._
 
 object Lib {
@@ -37,7 +39,7 @@ object Lib {
 
   // Json -----------------------------------------------------------------------------------------
   def screeningInfoBasic(screeningId: ScreeningId, info: ScreeningInfo): JsObject = {
-    val startHour = info.start.toLocalTime.getHourOfDay
+    val startHour   = info.start.toLocalTime.getHourOfDay
     val startMinute = info.start.toLocalTime.getMinuteOfHour
 
     Json.obj(
@@ -65,9 +67,14 @@ object Lib {
 
     basicInfo = screeningInfoBasic(screeningId, info)
 
+    date = DateTimeFormat.forPattern("dd-MM-yyyy").print(info.start)
+
     result = (
       basicInfo
+      + ("date" -> Json.toJson(date))
       + ("room" -> Json.toJson(info.room))
+      + ("rows" -> Json.toJson(availableSeats.dim.numRows))
+      + ("seats-per-row" -> Json.toJson(availableSeats.dim.numColumns))
       + ("availible-seats" -> Json.toJson(availableSeats.seats))
     )
     
