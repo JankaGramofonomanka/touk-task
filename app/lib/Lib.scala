@@ -1,6 +1,7 @@
 package lib
 
 import play.api.libs.json._
+import cats.implicits._
 
 import lib.DataDefs._
 
@@ -11,6 +12,13 @@ object Lib {
     case Adult    => 25
     case Student  => 18
     case Child    => 12.5
+  }
+
+  def parseTicketType(str: String): Option[TicketType] = str match {
+    case "adult"    => Some(Adult)
+    case "student"  => Some(Student)
+    case "child"    => Some(Child)
+    case _          => None
   }
 
   // Json -----------------------------------------------------------------------------------------
@@ -37,7 +45,47 @@ object Lib {
     
   } yield basicInfo + ("room" -> Json.toJson(info.room)) + ("availible-seats" -> Json.toJson(seats))
 
-  def processReservationData(body: JsValue): Option[Reservation] = ???
+
+  def processReservationData(
+    screeningId: ScreeningId, 
+    body: JsValue,
+  ): Option[Reservation] = body match {
+
+    case JsObject(obj) => for {
+      jsonName    <- obj.get("name")
+      jsonSurname <- obj.get("surname")
+      jsonSeats   <- obj.get("seats")
+
+      name    <- jsonName   .asOpt[String]
+      surname <- jsonSurname.asOpt[String]
+
+      reserver = Person(name, surname)
+
+      seatReservationList: List[(Seat, TicketType)] <- jsonSeats match {
+        case JsArray(array) => array.toList.map(processSeatReservation(_)).traverse(x => x)
+        case _ => None
+      }
+
+      seatReservationMap: Map[Seat, TicketType] = seatReservationList.toMap
+
+    } yield Reservation(screeningId, seatReservationMap, reserver)
+
+    case _ => None
+  }
+
+  def processSeatReservation(jsonSeat: JsValue): Option[(Seat, TicketType)] = jsonSeat match {
+    case JsObject(elem) => for {
+      
+      jsonSeat    <- elem.get("seat")
+      jsonTicket  <- elem.get("ticket")
+
+      seat        <- jsonSeat.asOpt[Seat]
+      ticketType  <- jsonTicket.asOpt[String].flatMap(parseTicketType(_))
+
+    } yield (seat -> ticketType)
+    
+    case _ => None
+  }
 
 
   // Seats ----------------------------------------------------------------------------------------
@@ -92,9 +140,12 @@ object Lib {
   }
 
   def seatsPacked(seats: List[List[ColumnId]]): Boolean = {
-    val rowConnected: List[ColumnId] => Boolean = row => row.sorted match {
-      case Nil => true
-      case (x :: xs) => row.last == x + row.length - 1
+    val rowConnected: List[ColumnId] => Boolean = row => {
+      val rowSorted = row.sorted
+      rowSorted match {
+        case Nil => true
+        case (x :: xs) => rowSorted.last == x + rowSorted.length - 1
+      }
     }
 
     seats.forall(rowConnected)

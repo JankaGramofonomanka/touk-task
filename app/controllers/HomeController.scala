@@ -79,7 +79,7 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
 
     
     val result = for {
-      reservation <- processReservationData(request.body).toRight((400, "invalid request body"))
+      reservation <- processReservationData(screeningId, request.body).toRight((400, "invalid request body"))
 
       info <- MockDataBase.screenings.get(screeningId).toRight(
         (404, "screening with given id does not exist"))
