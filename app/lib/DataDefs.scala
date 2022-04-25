@@ -1,10 +1,11 @@
 package lib
 
 import com.github.nscala_time.time.Imports._
+import reactivemongo.bson.BSONObjectID
 
 object DataDefs {
-  type ScreeningId  = String
-  type RoomId       = Int
+  type ScreeningId  = BSONObjectID
+  type RoomId       = BSONObjectID
   type RowId        = Int
   type ColumnId     = Int
   type Seat         = (RowId, ColumnId)
@@ -17,6 +18,7 @@ object DataDefs {
   final object InconsistentData   extends Error
   final object NoSuchScreening    extends Error
   final object InvalidBody        extends Error
+  final object InvalidScreeningId extends Error
 
 
   sealed trait TicketType

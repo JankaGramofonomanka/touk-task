@@ -22,7 +22,6 @@ import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.Cursor
 
 import lib.DataDefs._
-import lib.MockDataBase
 import lib.Lib._
 
 
@@ -50,33 +49,37 @@ class HomeController @Inject()(
 
 
   // ----------------------------------------------------------------------------------------------
-  def screenings(date: String, from: String, to: String) = Action { implicit request => 
-    val startStr = s"$date $from"
-    val endStr = s"$date $to"
-    
-    val interval = for {
-      start <- Try(DateTimeFormat.forPattern("dd-MM-yyyy HH:mm").parseDateTime(startStr))
-      end   <- Try(DateTimeFormat.forPattern("dd-MM-yyyy HH:mm").parseDateTime(endStr))
-    } yield (start, end)
+  def screenings(date: String, from: String, to: String) = Action.async {
+    _ => {
+      val dateFrom  = s"$date $from"
+      val dateTo    = s"$date $to"
 
-    interval match {
-      case Failure(error) => errorResponse(InvalidParameters)
-      
-      case Success((start, end)) => {
-        val screenings = MockDataBase.screenings.toList.filter(
-          t => start <= t._2.start && t._2.start + t._2.duration <= end
-        )
+      val tryFrom = Try(DateTimeFormat.forPattern("dd-MM-yyyy HH:mm").parseDateTime(dateFrom))
+      val tryTo   = Try(DateTimeFormat.forPattern("dd-MM-yyyy HH:mm").parseDateTime(dateTo))
 
-        val screeningInfos = screenings.map(t => screeningInfoBasic(t._1, t._2))
-        Ok(Json.toJson(screeningInfos))
+
+      val futureResult = for {
+        from  <- EitherT.fromOption[Future](tryFrom .toOption, InvalidParameters)
+        to    <- EitherT.fromOption[Future](tryTo   .toOption, InvalidParameters)
+
+        screenings <- getScreenings(from, to)
+        screeningInfos = screenings.map(t => screeningInfoBasic(t._1, t._2))
+      } yield Json.toJson(screeningInfos)
+
+      for {
+        result <- futureResult.value
+      } yield result match {
+        case Left(error)  => errorResponse(error)
+        case Right(infos)  => Ok(infos)
       }
     }
   }
 
   // ----------------------------------------------------------------------------------------------
-  def getScreening(screeningId: String) = Action.async { _ => {
+  def getScreening(screeningIdStr: String) = Action.async { _ => {
 
       val futureResult = for {
+        screeningId <- EitherT.fromEither[Future](stringToObjectID(screeningIdStr, InvalidScreeningId))
         info      <- getScreeningInfo(screeningId)
         moreInfo  <- screeningInfo(screeningId, info, getRoomDimension, getReservations)
       } yield moreInfo
@@ -91,16 +94,20 @@ class HomeController @Inject()(
   }
 
   // ----------------------------------------------------------------------------------------------
-  def postScreening(screeningId: String) = Action.async(parse.json) {
+  def postScreening(screeningIdStr: String) = Action.async(parse.json) {
     implicit request => for {
 
-      result <- serveReservationRequest(
-        screeningId,
-        request.body,
-        getScreeningInfo,
-        getRoomDimension,
-        getReservations,
-      ).value
+      result <- (for {
+        screeningId <- EitherT.fromEither[Future](stringToObjectID(screeningIdStr, InvalidScreeningId))
+        price <- serveReservationRequest(
+          screeningId,
+          request.body,
+          getScreeningInfo,
+          getRoomDimension,
+          getReservations,
+        )
+      } yield price).value
+
 
     } yield result match {
       case Left(error) => errorResponse(error)
@@ -109,14 +116,21 @@ class HomeController @Inject()(
   }
 
 
-
   // ----------------------------------------------------------------------------------------------
   def getReservations(screeningId: ScreeningId): Future[List[Reservation]]
-    = Future { MockDataBase.reservations.filter(_.screening == screeningId) }
+    //= Future { MockDataBase.reservations.filter(_.screening == screeningId) }
+    = ???
   
   def getRoomDimension(roomId: RoomId): EitherT[Future, Error, RoomDimension]
-    = EitherT (Future { MockDataBase.rooms.get(roomId).toRight(InconsistentData) })
+    //= EitherT(Future { MockDataBase.rooms.get(roomId).toRight(InconsistentData) })
+    = ???
   
   def getScreeningInfo(screeningId: ScreeningId): EitherT[Future, Error, ScreeningInfo]
-    = EitherT (Future { MockDataBase.screenings.get(screeningId).toRight(NoSuchScreening) })
+    //= EitherT(Future { MockDataBase.screenings.get(screeningId).toRight(NoSuchScreening) })
+    = ???
+
+  def getScreenings(from: DateTime, to: DateTime): EitherT[Future, Error, List[(ScreeningId, ScreeningInfo)]]
+    //= EitherT(Future { Right(MockDataBase.screenings.toList.filter(
+    //    t => from <= t._2.start && t._2.start + t._2.duration <= to))})
+    = ???
 }

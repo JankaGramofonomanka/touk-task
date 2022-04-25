@@ -4,12 +4,15 @@ import play.api.mvc._
 import play.api.mvc.Results._
 import play.api.libs.json._
 
+import scala.util.{Failure, Success, Try}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import cats.implicits._
 import cats.data.EitherT
+import java.math.BigInteger
 
 import com.github.nscala_time.time.Imports._
+import reactivemongo.bson.BSONObjectID
 
 import lib.DataDefs._
 
@@ -37,17 +40,38 @@ object Lib {
     case InconsistentData   => Status(500)("inconsistent data")
     case NoSuchScreening    => Status(404)("screening with given id does not exist")
     case InvalidBody        => Status(400)("invalid request body")
+    case InvalidScreeningId => Status(400)("Invalid screeningId")
   }
 
 
 
   // Json -----------------------------------------------------------------------------------------
+  def stringToObjectID(str: String, ifFailure: Error): Either[Error, BSONObjectID] = {
+    val result = Try({
+      val bigInt = new BigInteger(str, 16)
+      val byteArr = bigInt.toByteArray
+      BSONObjectID(byteArr)
+    })
+
+    result match {
+      case Success(id)  => Right(id)
+      case Failure(_)   => Left(ifFailure)
+    }
+  }
+
+  def objectIdToString(id: BSONObjectID): String = {
+    val byteArr = id.valueAsArray
+    val bigInt = new BigInteger(byteArr)
+    bigInt.toString(16)
+  }
+
+
   def screeningInfoBasic(screeningId: ScreeningId, info: ScreeningInfo): JsObject = {
     val startHour   = info.start.toLocalTime.getHourOfDay
     val startMinute = info.start.toLocalTime.getMinuteOfHour
 
     Json.obj(
-      "screeningId" -> screeningId,
+      "screeningId" -> objectIdToString(screeningId),
       "title"       -> info.title,
       "start-time"  -> f"$startHour%02d:$startMinute%02d",
       "duration"    -> info.duration.toStandardMinutes.getMinutes,
@@ -76,7 +100,7 @@ object Lib {
     result = (
       basicInfo
       + ("date" -> Json.toJson(date))
-      + ("room" -> Json.toJson(info.room))
+      + ("room" -> Json.toJson(objectIdToString(info.room)))
       + ("rows" -> Json.toJson(availableSeats.dim.numRows))
       + ("seats-per-row" -> Json.toJson(availableSeats.dim.numColumns))
       + ("availible-seats" -> Json.toJson(availableSeats.seats))
@@ -171,11 +195,12 @@ object Lib {
     getReservations:  ScreeningId => Future[List[Reservation]],
 
   ): EitherT[Future, Error, Double] = {
-    val reservation = Reservation("asd", Map(), Person("qwe", "rty"))
     for {
 
-      reservation <- EitherT.fromOption[Future](processReservationData(screeningId, body), InvalidBody: Error)
-      //reservation <- EitherT[Future, Error, Reservation](Future { Right(Reservation("asd", Map(), Person("qwe", "rty"))) })
+      reservation <- EitherT.fromOption[Future](
+        processReservationData(screeningId, body),
+        InvalidBody: Error
+      )
 
 
       _ <- validateReservation(
