@@ -3,7 +3,11 @@ package lib
 import play.api.mvc._
 import play.api.mvc.Results._
 import play.api.libs.json._
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 import cats.implicits._
+import cats.data.EitherT
 
 import com.github.nscala_time.time.Imports._
 
@@ -25,7 +29,7 @@ object Lib {
     case _          => None
   }
 
-  
+
   def errorResponse(error: Error): Result = error match {
     case InvalidParameters  => Status(400)("invalid parameters")
     case SeatsAlredyTaken   => Status(400)("seats alredy taken")
@@ -34,8 +38,8 @@ object Lib {
     case NoSuchScreening    => Status(404)("screening with given id does not exist")
     case InvalidBody        => Status(400)("invalid request body")
   }
-  
-  
+
+
 
   // Json -----------------------------------------------------------------------------------------
   def screeningInfoBasic(screeningId: ScreeningId, info: ScreeningInfo): JsObject = {
@@ -53,11 +57,11 @@ object Lib {
   def screeningInfo(
     screeningId: ScreeningId,
     info: ScreeningInfo,
-    getRoomDimension: RoomId => Either[Error, RoomDimension],
-    getReservations: ScreeningId => List[Reservation],
-  ): Either[Error, JsObject] = for {
+    getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
+    getReservations: ScreeningId => Future[List[Reservation]],
+  ): EitherT[Future, Error, JsObject] = for {
 
-    
+
     availableSeats <- getAvailableSeats(
       screeningId,
       info.room,
@@ -77,13 +81,15 @@ object Lib {
       + ("seats-per-row" -> Json.toJson(availableSeats.dim.numColumns))
       + ("availible-seats" -> Json.toJson(availableSeats.seats))
     )
-    
+
   } yield result
 
 
   def processReservationData(
-    screeningId: ScreeningId, 
+    screeningId: ScreeningId,
     body: JsValue,
+  //): EitherT[Future, Error, Reservation] = ???
+
   ): Option[Reservation] = body match {
 
     case JsObject(obj) => for {
@@ -108,9 +114,10 @@ object Lib {
     case _ => None
   }
 
+
   def processSeatReservation(jsonSeat: JsValue): Option[(Seat, TicketType)] = jsonSeat match {
     case JsObject(elem) => for {
-      
+
       jsonSeat    <- elem.get("seat")
       jsonTicket  <- elem.get("ticket")
 
@@ -118,8 +125,70 @@ object Lib {
       ticketType  <- jsonTicket.asOpt[String].flatMap(parseTicketType(_))
 
     } yield (seat -> ticketType)
-    
+
     case _ => None
+  }
+
+  def validateReservation(
+    screeningId: ScreeningId,
+    reservation: Reservation,
+
+    getScreeningInfo: ScreeningId => EitherT[Future, Error, ScreeningInfo],
+    getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
+    getReservations:  ScreeningId => Future[List[Reservation]],
+
+  ): EitherT[Future, Error, Unit] = for {
+
+    info <- getScreeningInfo(screeningId)
+    takenSeats <- getTakenSeats(screeningId, info.room, getRoomDimension, getReservations)
+
+    requestedSeats = reservation.seats.keys.toList
+
+    _ <- EitherT.cond[Future](
+      takenSeats.seats.intersect(requestedSeats).isEmpty,
+      (),
+      SeatsAlredyTaken: Error
+    )
+
+    takenSeatsAfterReservation = seatListToArray(takenSeats.dim, takenSeats.seats ++ requestedSeats)
+    _ <- EitherT.cond[Future](
+      seatsConnected(takenSeatsAfterReservation),
+      (),
+      SeatsNotConnected: Error
+    )
+
+    //price = reservation.seats.values.map(ticketPrice(_)).sum
+  } yield ()
+
+  def calculatePrice(reservation: Reservation): Double = reservation.seats.values.map(ticketPrice(_)).sum
+
+  def serveReservationRequest(
+    screeningId:  ScreeningId,
+    body:         JsValue,
+
+    getScreeningInfo: ScreeningId => EitherT[Future, Error, ScreeningInfo],
+    getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
+    getReservations:  ScreeningId => Future[List[Reservation]],
+
+  ): EitherT[Future, Error, Double] = {
+    val reservation = Reservation("asd", Map(), Person("qwe", "rty"))
+    for {
+
+      reservation <- EitherT.fromOption[Future](processReservationData(screeningId, body), InvalidBody: Error)
+      //reservation <- EitherT[Future, Error, Reservation](Future { Right(Reservation("asd", Map(), Person("qwe", "rty"))) })
+
+
+      _ <- validateReservation(
+        screeningId,
+        reservation,
+        getScreeningInfo,
+        getRoomDimension,
+        getReservations,
+      )
+
+      price = reservation.seats.values.map(ticketPrice(_)).sum
+
+    } yield price
   }
 
 
@@ -127,9 +196,9 @@ object Lib {
   def getAvailableSeats(
     screeningId: ScreeningId,
     roomId: RoomId,
-    getRoomDimension: RoomId => Either[Error, RoomDimension],
-    getReservations: ScreeningId => List[Reservation],
-  ): Either[Error, AvailableSeats] = for {
+    getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
+    getReservations: ScreeningId => Future[List[Reservation]],
+  ): EitherT[Future, Error, AvailableSeats] = for {
 
     takenSeats <- getTakenSeats(
       screeningId,
@@ -144,13 +213,12 @@ object Lib {
   def getTakenSeats(
     screeningId: ScreeningId,
     roomId: RoomId,
-    getRoomDimension: RoomId => Either[Error, RoomDimension],
-    getReservations: ScreeningId => List[Reservation],
-
-  ): Either[Error, TakenSeats] = for {
+    getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
+    getReservations: ScreeningId => Future[List[Reservation]],
+  ): EitherT[Future, Error, TakenSeats] = for {
 
     dim <- getRoomDimension(roomId)
-    reservations = getReservations(screeningId)
+    reservations <- EitherT.right(getReservations(screeningId))
     reservedSeats = reservations.flatMap(_.seats.keys)
 
   } yield TakenSeats(dim, reservedSeats)

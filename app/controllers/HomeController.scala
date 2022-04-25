@@ -6,8 +6,20 @@ import play.api.mvc._
 import play.api.libs.json._
 
 import scala.util.{Failure, Success, Try}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import cats.implicits._
+import cats.data.EitherT
+import java.math.BigInteger
 
 import com.github.nscala_time.time.Imports._
+
+import play.modules.reactivemongo.ReactiveMongoApi
+import reactivemongo.play.json._
+import reactivemongo.play.json.collection.JSONCollection
+import reactivemongo.bson._
+import reactivemongo.api.collections.GenericQueryBuilder
+import reactivemongo.api.Cursor
 
 import lib.DataDefs._
 import lib.MockDataBase
@@ -19,7 +31,10 @@ import lib.Lib._
  * application's home page.
  */
 @Singleton
-class HomeController @Inject()(val controllerComponents: ControllerComponents) extends BaseController {
+class HomeController @Inject()(
+  val controllerComponents: ControllerComponents,
+  api: ReactiveMongoApi
+) extends BaseController {
 
   /**
    * Create an Action to render an HTML page.
@@ -59,64 +74,49 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
   }
 
   // ----------------------------------------------------------------------------------------------
-  def getScreening(screeningId: String) = Action { _ =>
-    Ok(Json.obj("key" -> "val", "val" -> "key", "id" -> screeningId))
+  def getScreening(screeningId: String) = Action.async { _ => {
 
-    val result = for {
-      info <- getScreeningInfo(screeningId)
-      
-      moreInfo <- screeningInfo(screeningId, info, getRoomDimension, getReservations)
-    } yield moreInfo
+      val futureResult = for {
+        info      <- getScreeningInfo(screeningId)
+        moreInfo  <- screeningInfo(screeningId, info, getRoomDimension, getReservations)
+      } yield moreInfo
 
-    result match {
-      case Left(error)  => errorResponse(error)
-      case Right(info)  => Ok(info)
+      for {
+        result <- futureResult.value
+      } yield result match {
+        case Left(error)  => errorResponse(error)
+        case Right(info)  => Ok(info)
+      }
     }
   }
 
   // ----------------------------------------------------------------------------------------------
-  def postScreening(screeningId: String) = Action(parse.json) { implicit request =>
+  def postScreening(screeningId: String) = Action.async(parse.json) {
+    implicit request => for {
 
-    
-    val result = for {
-      reservation <- processReservationData(screeningId, request.body).toRight(InvalidBody)
+      result <- serveReservationRequest(
+        screeningId,
+        request.body,
+        getScreeningInfo,
+        getRoomDimension,
+        getReservations,
+      ).value
 
-      info <- getScreeningInfo(screeningId)
-      takenSeats <- getTakenSeats(screeningId, info.room, getRoomDimension, getReservations)
-      requestedSeats = reservation.seats.keys.toList
-      
-      _ <- Either.cond(
-        takenSeats.seats.intersect(requestedSeats).isEmpty,
-        (),
-        SeatsAlredyTaken
-      )
-
-      takenSeatsAfterReservation = seatListToArray(takenSeats.dim, takenSeats.seats ++ requestedSeats)
-      _ <- Either.cond(
-        seatsConnected(takenSeatsAfterReservation),
-        (),
-        SeatsNotConnected
-      )
-
-      price = reservation.seats.values.map(ticketPrice(_)).sum
-      
-    } yield price
-
-    result match {
-      case Left(error)  => errorResponse(error)
+    } yield result match {
+      case Left(error) => errorResponse(error)
       case Right(price) => Ok(Json.obj("price" -> price))
     }
-    
-    
   }
 
+
+
   // ----------------------------------------------------------------------------------------------
-  def getReservations(screeningId: ScreeningId): List[Reservation]
-    = MockDataBase.reservations.filter(_.screening == screeningId)
+  def getReservations(screeningId: ScreeningId): Future[List[Reservation]]
+    = Future { MockDataBase.reservations.filter(_.screening == screeningId) }
   
-  def getRoomDimension(roomId: RoomId): Either[Error, RoomDimension]
-    = MockDataBase.rooms.get(roomId).toRight(InconsistentData)
+  def getRoomDimension(roomId: RoomId): EitherT[Future, Error, RoomDimension]
+    = EitherT (Future { MockDataBase.rooms.get(roomId).toRight(InconsistentData) })
   
-  def getScreeningInfo(screeningId: ScreeningId): Either[Error, ScreeningInfo]
-    = MockDataBase.screenings.get(screeningId).toRight(NoSuchScreening)
+  def getScreeningInfo(screeningId: ScreeningId): EitherT[Future, Error, ScreeningInfo]
+    = EitherT (Future { MockDataBase.screenings.get(screeningId).toRight(NoSuchScreening) })
 }
