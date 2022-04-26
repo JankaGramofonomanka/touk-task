@@ -16,11 +16,13 @@ import com.github.nscala_time.time.Imports._
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.play.json._
 import reactivemongo.play.json.collection.JSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson._
 import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.Cursor
 import lib.DataDefs._
 import lib.Lib._
+import reactivemongo.api.commands._
 
 
 /**
@@ -103,6 +105,7 @@ class HomeController @Inject()(
           getScreeningInfo,
           getRoomDimension,
           getReservations,
+          insertReservation,
         )
       } yield price).value
 
@@ -186,4 +189,19 @@ class HomeController @Inject()(
         )
       } yield results
     }
+
+  def insertReservation(reservation: Reservation): EitherT[Future, Error, Unit] = {
+    val futureResult: Future[Either[Error, Unit]] = for {
+      db <- api.database
+      reservationDoc = reservationToBSON(reservation)
+      res <- db.collection[JSONCollection]("reservations").insert(reservationDoc)
+
+    } yield res match {
+      case _: LastError           => Left(Unknown)
+      case _: DefaultWriteResult  => Right(())
+      case _: UpdateWriteResult   => Right(())
+    }
+
+    EitherT(futureResult)
+  }
 }

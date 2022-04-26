@@ -3,7 +3,7 @@ info:
   description: |
     An API for an application for reserving seats in a cinema
   version: "1.0.0"
-  title: touk-task-api 
+  title: touk-task-api
   termsOfService: 'http://swagger.io/terms/'
   contact:
     email: janserwatka@outlook.io
@@ -21,7 +21,7 @@ servers:
 paths:
 
   /screenings:
-  
+
     # ------------------------------------------------------------------
     get:
       summary: Lists availible screenings
@@ -31,24 +31,24 @@ paths:
           description: day of the screenings
           schema:
             $ref: '#/components/schemas/Date'
-          
+
         - name: from
           in: query
-          description: 
-            beginning of the time interval in which the listed screenings 
+          description:
+            beginning of the time interval in which the listed screenings
             take place
           schema:
             $ref: '#/components/schemas/Hour'
-            
+
         - name: to
           in: query
-          description: 
+          description:
             end of the time interval in which the listed screenings take place
           schema:
             $ref: '#/components/schemas/Hour'
-            
+
           required: true
-          
+
       responses:
         '200':
           description: List of screenings
@@ -61,10 +61,10 @@ paths:
         
         '400':
           description: Invalid paramteters
-                  
-    
+
+
   /screenings/{screeningId}:
-  
+
     # ------------------------------------------------------------------
     get:
       summary: Information about the screening
@@ -82,9 +82,9 @@ paths:
         '400':
           description: Invalid screeningId
         
-        '404': 
+        '404':
           description: screening with given id does not exist
-        
+
     # ------------------------------------------------------------------
     post:
       summary: Reserves seats for the screening
@@ -98,7 +98,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ReservationData'
-        
+
       responses:
         '200':
           description: reservation succesfull
@@ -106,15 +106,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReservationResult'
-              
+
         
-        '400': 
-          description: 
+        '400':
+          description:
             invalid request body / reservation not successfull
         
-        '404': 
+        '404':
           description: screening with given id does not exist
-        
+
 
 
 
@@ -142,7 +142,7 @@ components:
       type: string
       format: HH:MM
       example: "16:30"
-      
+
     Date:
       type: string
       format: DD-MM-YYYY
@@ -155,7 +155,7 @@ components:
         - title
         - start-time
         - duration
-        
+
       properties:
         screeningId:
           $ref: '#/components/schemas/ScreeningId'
@@ -167,7 +167,7 @@ components:
         
         start-time:
           $ref: '#/components/schemas/Hour'
-              
+
         
         duration:
           type: integer
@@ -193,7 +193,7 @@ components:
               type: integer
               description: Number of the screening room
               example: 3
-              
+
             rows:
               type: integer
               description: Number of rows in the screening room
@@ -203,33 +203,25 @@ components:
               type: integer
               description: Number of seats per row in the screening room
               example: 10
-              
+
             availible-seats:
               $ref: '#/components/schemas/SeatsInRoom'
     
-    Seat:
-      type: array
-      items:
-        type: integer
-      
-      format: two-element array
-      example: [10, 12]
-      
     SeatsInRow:
       type: array
       items:
         type: integer
-      
+
       description: array of available seat numbers in the row
       example: [1, 2, 3, 8, 9, 10]
-    
+
     SeatsInRoom:
       type: array
       items:
         $ref: '#/components/schemas/SeatsInRow'
-          
+
       description: an array of rows of available seats
-      example: 
+      example:
         [
           [1, 2, 10],
           [1, 2, 3, 8, 9, 10],
@@ -237,32 +229,36 @@ components:
           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         ]
-    
+
     SeatDict:
       type: array
       items:
         type: object
         required:
+          - row
           - seat
           - ticket
-        
+
         properties:
+          row:
+            type: integer
+
           seat:
-            $ref: '#/components/schemas/Seat'
-          
+            type: integer
+
           ticket:
             type: string
             enum:
               - adult
               - student
               - child
-        
-      example: 
+
+      example:
         [
-          {"seat": [5, 11], "ticket": "adult"},
-          {"seat": [5, 12], "ticket": "adult"},
-          {"seat": [5, 13], "ticket": "child"},
-          {"seat": [5, 14], "ticket": "student"},
+          {"row": 5, "seat": 11, "ticket": "adult"},
+          {"row": 5, "seat": 12, "ticket": "adult"},
+          {"row": 5, "seat": 13, "ticket": "child"},
+          {"row": 5, "seat": 14, "ticket": "student"},
         ]
     
     ReservationData:
@@ -275,14 +271,14 @@ components:
       properties:
         name:
           type: string
-          format: 
+          format:
             a string at least three characters long, containing only ofletters
           example: "John"
         
         surname:
           type: string
-          format: 
-            a string at least three characters long, consisting only of letters 
+          format:
+            a string at least three characters long, consisting only of letters
             or of two parts, separated by a dash, each part consosting only of letters
           example: "Galt"
         
@@ -290,7 +286,7 @@ components:
           allOf:
             - $ref: '#/components/schemas/SeatDict'
             - format: a non-empty array
-              
+
     
     ReservationResult:
       type: object

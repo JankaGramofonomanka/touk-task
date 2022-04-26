@@ -8,7 +8,9 @@ object DataDefs {
   type RoomId       = String
   type RowId        = Int
   type ColumnId     = Int
-  type Seat         = (RowId, ColumnId)
+
+
+  case class Seat(row: RowId, column: ColumnId)
 
 
   sealed trait Error
