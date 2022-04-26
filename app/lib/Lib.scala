@@ -12,7 +12,8 @@ import cats.data.EitherT
 import java.math.BigInteger
 
 import com.github.nscala_time.time.Imports._
-import reactivemongo.bson.BSONObjectID
+import reactivemongo.bson._
+
 
 import lib.DataDefs._
 
@@ -100,7 +101,7 @@ object Lib {
     result = (
       basicInfo
       + ("date" -> Json.toJson(date))
-      + ("room" -> Json.toJson(objectIdToString(info.room)))
+      + ("room" -> Json.toJson(info.room))
       + ("rows" -> Json.toJson(availableSeats.dim.numRows))
       + ("seats-per-row" -> Json.toJson(availableSeats.dim.numColumns))
       + ("availible-seats" -> Json.toJson(availableSeats.seats))
@@ -127,7 +128,7 @@ object Lib {
       reserver = Person(name, surname)
 
       seatReservationList: List[(Seat, TicketType)] <- jsonSeats match {
-        case JsArray(array) => array.toList.map(processSeatReservation(_)).traverse(x => x)
+        case JsArray(array) => array.toList.map(processSeatReservation(_)).sequence
         case _ => None
       }
 
@@ -215,6 +216,42 @@ object Lib {
 
     } yield price
   }
+
+  // Bson -----------------------------------------------------------------------------------------
+  def bsonToString(bson: BSONValue): Option[String] = bson match {
+    case BSONString(value)  => Some(value)
+    case _                  => None
+  }
+
+  def bsonToDateTime(bson: BSONValue): Option[DateTime] = bson match {
+    case BSONDateTime(value)  => Some(new DateTime(value))
+    case _                    => None
+  }
+
+  def bsonToObjectId(bson: BSONValue): Option[BSONObjectID] = bson match {
+    case BSONObjectID(value)  => Some(BSONObjectID(value))
+    case _                    => None
+  }
+
+  def processScreeningBSON(doc: BSONDocument): Option[(ScreeningId, ScreeningInfo)] = for {
+
+    bsonId    <- doc.get("_id")
+    bsonTitle <- doc.get("title")
+    bsonStart <- doc.get("start")
+    bsonEnd   <- doc.get("end")
+    bsonRoom  <- doc.get("room-id")
+
+    id    <- bsonToObjectId (bsonId)
+    title <- bsonToString   (bsonTitle)
+    start <- bsonToDateTime (bsonStart)
+    end   <- bsonToDateTime (bsonEnd)
+    room  <- bsonToString   (bsonRoom)
+
+    duration = new Duration(start, end)
+
+    info = ScreeningInfo(title, start, duration, room)
+
+  } yield (id, info)
 
 
   // Seats ----------------------------------------------------------------------------------------

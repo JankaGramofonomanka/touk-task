@@ -10,17 +10,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import cats.implicits._
 import cats.data.EitherT
+
 import java.math.BigInteger
-
 import com.github.nscala_time.time.Imports._
-
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.play.json._
 import reactivemongo.play.json.collection.JSONCollection
 import reactivemongo.bson._
 import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.Cursor
-
 import lib.DataDefs._
 import lib.Lib._
 
@@ -130,7 +128,27 @@ class HomeController @Inject()(
     = ???
 
   def getScreenings(from: DateTime, to: DateTime): EitherT[Future, Error, List[(ScreeningId, ScreeningInfo)]]
-    //= EitherT(Future { Right(MockDataBase.screenings.toList.filter(
-    //    t => from <= t._2.start && t._2.start + t._2.duration <= to))})
-    = ???
+    = {
+      val futureScreenings: Future[List[BSONDocument]] = for {
+        db <- api.database
+
+        queryDoc = BSONDocument(
+          "start" -> BSONDocument("$gte" -> BSONDateTime(from.getMillis)),
+          "end"   -> BSONDocument("$lte" -> BSONDateTime(to.getMillis)),
+        )
+
+
+        screenings <- db.collection[JSONCollection]("screenings")
+          .find(queryDoc)
+          .cursor[BSONDocument]()
+          .collect[List](100, Cursor.FailOnError[List[BSONDocument]]())
+
+      } yield screenings
+
+      for {
+        screenings <- EitherT.right[Error](futureScreenings)
+        results <- EitherT.fromOption[Future](
+          screenings.traverse(processScreeningBSON(_)), InconsistentData: Error)
+      } yield results
+    }
 }

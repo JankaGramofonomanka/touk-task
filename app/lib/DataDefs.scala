@@ -5,7 +5,7 @@ import reactivemongo.bson.BSONObjectID
 
 object DataDefs {
   type ScreeningId  = BSONObjectID
-  type RoomId       = BSONObjectID
+  type RoomId       = String
   type RowId        = Int
   type ColumnId     = Int
   type Seat         = (RowId, ColumnId)
