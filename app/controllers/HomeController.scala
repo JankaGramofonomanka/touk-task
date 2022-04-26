@@ -115,17 +115,50 @@ class HomeController @Inject()(
 
 
   // ----------------------------------------------------------------------------------------------
-  def getReservations(screeningId: ScreeningId): Future[List[Reservation]]
-    //= Future { MockDataBase.reservations.filter(_.screening == screeningId) }
-    = ???
+  def getReservations(screeningId: ScreeningId): EitherT[Future, Error, List[Reservation]]
+    = {
+      val futureQueryResult: Future[List[BSONDocument]] = for {
+        db <- api.database
+        queryDoc = BSONDocument("screening-id" -> screeningId)
+        reservations <- db.collection[JSONCollection]("reservations")
+          .find(queryDoc)
+          .cursor[BSONDocument]()
+          .collect[List](1000, Cursor.FailOnError[List[BSONDocument]]())
+      } yield reservations
+
+      for {
+        docs <- EitherT.right[Error](futureQueryResult)
+        reservations <- EitherT.fromOption[Future](
+          docs.traverse(processReservationBSON(_)),
+          InconsistentData: Error,
+        )
+      } yield reservations
+  }
   
   def getRoomDimension(roomId: RoomId): EitherT[Future, Error, RoomDimension]
-    //= EitherT(Future { MockDataBase.rooms.get(roomId).toRight(InconsistentData) })
-    = ???
+    = for {
+      db <- EitherT.right[Error](api.database)
+      queryDoc = BSONDocument ("room-id" -> roomId)
+      doc <- EitherT.fromOptionF[Future, Error, BSONDocument](
+        db.collection("rooms").find(queryDoc).one[BSONDocument],
+        InconsistentData: Error
+      )
+
+      dim <- EitherT.fromOption[Future](processRoomBSON(doc), InconsistentData: Error)
+    } yield dim
   
   def getScreeningInfo(screeningId: ScreeningId): EitherT[Future, Error, ScreeningInfo]
-    //= EitherT(Future { MockDataBase.screenings.get(screeningId).toRight(NoSuchScreening) })
-    = ???
+    = for {
+      db <- EitherT.right[Error](api.database)
+
+      queryDoc = BSONDocument ("_id" -> screeningId)
+      doc <- EitherT.fromOptionF[Future, Error, BSONDocument](
+        db.collection[JSONCollection]("screenings").find(queryDoc).one[BSONDocument],
+        NoSuchScreening
+      )
+
+      info <- EitherT.fromOption[Future](processScreeningBSON(doc), InconsistentData: Error)
+    } yield info._2
 
   def getScreenings(from: DateTime, to: DateTime): EitherT[Future, Error, List[(ScreeningId, ScreeningInfo)]]
     = {
@@ -148,7 +181,9 @@ class HomeController @Inject()(
       for {
         screenings <- EitherT.right[Error](futureScreenings)
         results <- EitherT.fromOption[Future](
-          screenings.traverse(processScreeningBSON(_)), InconsistentData: Error)
+          screenings.traverse(processScreeningBSON(_)),
+          InconsistentData: Error,
+        )
       } yield results
     }
 }

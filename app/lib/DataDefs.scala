@@ -19,6 +19,7 @@ object DataDefs {
   final object NoSuchScreening    extends Error
   final object InvalidBody        extends Error
   final object InvalidScreeningId extends Error
+  final object Unknown            extends Error
 
 
   sealed trait TicketType

@@ -42,6 +42,7 @@ object Lib {
     case NoSuchScreening    => Status(404)("screening with given id does not exist")
     case InvalidBody        => Status(400)("invalid request body")
     case InvalidScreeningId => Status(400)("Invalid screeningId")
+    case Unknown            => Status(500)("unknown error")
   }
 
 
@@ -83,7 +84,7 @@ object Lib {
     screeningId: ScreeningId,
     info: ScreeningInfo,
     getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
-    getReservations: ScreeningId => Future[List[Reservation]],
+    getReservations: ScreeningId => EitherT[Future, Error, List[Reservation]],
   ): EitherT[Future, Error, JsObject] = for {
 
 
@@ -113,8 +114,6 @@ object Lib {
   def processReservationData(
     screeningId: ScreeningId,
     body: JsValue,
-  //): EitherT[Future, Error, Reservation] = ???
-
   ): Option[Reservation] = body match {
 
     case JsObject(obj) => for {
@@ -160,7 +159,7 @@ object Lib {
 
     getScreeningInfo: ScreeningId => EitherT[Future, Error, ScreeningInfo],
     getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
-    getReservations:  ScreeningId => Future[List[Reservation]],
+    getReservations:  ScreeningId => EitherT[Future, Error, List[Reservation]],
 
   ): EitherT[Future, Error, Unit] = for {
 
@@ -182,7 +181,6 @@ object Lib {
       SeatsNotConnected: Error
     )
 
-    //price = reservation.seats.values.map(ticketPrice(_)).sum
   } yield ()
 
   def calculatePrice(reservation: Reservation): Double = reservation.seats.values.map(ticketPrice(_)).sum
@@ -193,7 +191,7 @@ object Lib {
 
     getScreeningInfo: ScreeningId => EitherT[Future, Error, ScreeningInfo],
     getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
-    getReservations:  ScreeningId => Future[List[Reservation]],
+    getReservations:  ScreeningId => EitherT[Future, Error, List[Reservation]],
 
   ): EitherT[Future, Error, Double] = {
     for {
@@ -223,14 +221,24 @@ object Lib {
     case _                  => None
   }
 
+  def bsonToInt(bson: BSONValue): Option[Int] = bson match {
+    case BSONInteger(value) => Some(value)
+    case _                  => None
+  }
+
   def bsonToDateTime(bson: BSONValue): Option[DateTime] = bson match {
     case BSONDateTime(value)  => Some(new DateTime(value))
     case _                    => None
   }
 
   def bsonToObjectId(bson: BSONValue): Option[BSONObjectID] = bson match {
-    case BSONObjectID(value)  => Some(BSONObjectID(value))
+    case objId: BSONObjectID  => Some(objId)
     case _                    => None
+  }
+
+  def bsonToArray(bson: BSONValue): Option[List[BSONValue]] = bson match {
+    case arr: BSONArray => Some(arr.elements.map(_.value))
+    case _              => None
   }
 
   def processScreeningBSON(doc: BSONDocument): Option[(ScreeningId, ScreeningInfo)] = for {
@@ -253,13 +261,55 @@ object Lib {
 
   } yield (id, info)
 
+  def processRoomBSON(doc: BSONDocument): Option[RoomDimension] = for {
+    bsonRows        <- doc.get("rows")
+    bsonSeatsPerRow <- doc.get("seats-per-row")
+
+    rows        <- bsonToInt(bsonRows)
+    seatsPerRow <- bsonToInt(bsonSeatsPerRow)
+
+  } yield RoomDimension(rows, seatsPerRow)
+
+  def processReservationBSON(doc: BSONDocument): Option[Reservation] = for {
+    bsonScreeningId <- doc.get("screening-id")
+    bsonSeats       <- doc.get("seats")
+    bsonName        <- doc.get("name")
+    bsonSurname     <- doc.get("surname")
+
+    screeningId   <- bsonToObjectId(bsonScreeningId)
+    bsonSeatArray <- bsonToArray(bsonSeats)
+    seats         <- bsonSeatArray.traverse(processSeatBSON(_))
+    name          <- bsonToString(bsonName)
+    surname       <- bsonToString(bsonSurname)
+
+  } yield Reservation(screeningId, seats.toMap, Person(name, surname))
+
+  def processSeatBSON(bson: BSONValue): Option[(Seat, TicketType)] = bson match {
+    case doc: BSONDocument => for {
+      bsonRow     <- doc.get("row")
+      bsonSeat    <- doc.get("seat")
+      bsonTicket  <- doc.get("ticket")
+
+      rowNum    <- bsonToInt(bsonRow)
+      seatNum   <- bsonToInt(bsonSeat)
+      ticketStr <- bsonToString(bsonTicket)
+
+      ticketType <- parseTicketType(ticketStr)
+      seat = (rowNum, seatNum)
+
+    } yield (seat, ticketType)
+
+    case _ => None
+  }
+
+
 
   // Seats ----------------------------------------------------------------------------------------
   def getAvailableSeats(
     screeningId: ScreeningId,
     roomId: RoomId,
     getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
-    getReservations: ScreeningId => Future[List[Reservation]],
+    getReservations: ScreeningId => EitherT[Future, Error, List[Reservation]],
   ): EitherT[Future, Error, AvailableSeats] = for {
 
     takenSeats <- getTakenSeats(
@@ -276,11 +326,11 @@ object Lib {
     screeningId: ScreeningId,
     roomId: RoomId,
     getRoomDimension: RoomId => EitherT[Future, Error, RoomDimension],
-    getReservations: ScreeningId => Future[List[Reservation]],
+    getReservations: ScreeningId => EitherT[Future, Error, List[Reservation]],
   ): EitherT[Future, Error, TakenSeats] = for {
 
     dim <- getRoomDimension(roomId)
-    reservations <- EitherT.right(getReservations(screeningId))
+    reservations <- getReservations(screeningId)
     reservedSeats = reservations.flatMap(_.seats.keys)
 
   } yield TakenSeats(dim, reservedSeats)
