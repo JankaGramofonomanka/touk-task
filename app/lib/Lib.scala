@@ -42,7 +42,7 @@ object Lib {
 
   def errorResponse(error: Error): Result = error match {
     case InvalidParameters  => Status(400)("invalid parameters")
-    case SeatsAlredyTaken   => Status(400)("seats alredy taken")
+    case SeatsAlreadyTaken  => Status(400)("seats alredy taken")
     case SeatsNotConnected  => Status(400)("seats left untaken between two reserved seats")
     case InconsistentData   => Status(500)("inconsistent data")
     case NoSuchScreening    => Status(404)("screening with given id does not exist")
@@ -286,7 +286,7 @@ object Lib {
     _ <- EitherT.cond[Future](
       takenSeats.seats.intersect(requestedSeats).isEmpty,
       (),
-      SeatsAlredyTaken: Error
+      SeatsAlreadyTaken: Error
     )
 
     takenSeatsAfterReservation = seatListToArray(takenSeats.dim, takenSeats.seats ++ requestedSeats)

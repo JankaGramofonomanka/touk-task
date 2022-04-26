@@ -1,24 +1,20 @@
 package controllers
 
 import javax.inject._
-import play.api._
 import play.api.mvc._
 import play.api.libs.json._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import cats.implicits._
 import cats.data.EitherT
 
-import java.math.BigInteger
 import com.github.nscala_time.time.Imports._
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.play.json._
-import reactivemongo.play.json.collection.JSONCollection
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson._
-import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.Cursor
 import lib.DataDefs._
 import lib.Lib._
@@ -123,7 +119,7 @@ class HomeController @Inject()(
       val futureQueryResult: Future[List[BSONDocument]] = for {
         db <- api.database
         queryDoc = BSONDocument("screening-id" -> screeningId)
-        reservations <- db.collection[JSONCollection]("reservations")
+        reservations <- db.collection[BSONCollection]("reservations")
           .find(queryDoc)
           .cursor[BSONDocument]()
           .collect[List](1000, Cursor.FailOnError[List[BSONDocument]]())
@@ -156,7 +152,7 @@ class HomeController @Inject()(
 
       queryDoc = BSONDocument ("_id" -> screeningId)
       doc <- EitherT.fromOptionF[Future, Error, BSONDocument](
-        db.collection[JSONCollection]("screenings").find(queryDoc).one[BSONDocument],
+        db.collection[BSONCollection]("screenings").find(queryDoc).one[BSONDocument],
         NoSuchScreening
       )
 
@@ -174,7 +170,7 @@ class HomeController @Inject()(
         )
 
 
-        screenings <- db.collection[JSONCollection]("screenings")
+        screenings <- db.collection[BSONCollection]("screenings")
           .find(queryDoc)
           .cursor[BSONDocument]()
           .collect[List](100, Cursor.FailOnError[List[BSONDocument]]())
@@ -194,7 +190,7 @@ class HomeController @Inject()(
     val futureResult: Future[Either[Error, Unit]] = for {
       db <- api.database
       reservationDoc = reservationToBSON(reservation)
-      res <- db.collection[JSONCollection]("reservations").insert(reservationDoc)
+      res <- db.collection[BSONCollection]("reservations").insert(reservationDoc)
 
     } yield res match {
       case _: LastError           => Left(Unknown)

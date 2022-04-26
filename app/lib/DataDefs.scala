@@ -15,7 +15,7 @@ object DataDefs {
 
   sealed trait Error
   final object InvalidParameters  extends Error
-  final object SeatsAlredyTaken   extends Error
+  final object SeatsAlreadyTaken  extends Error
   final object SeatsNotConnected  extends Error
   final object InconsistentData   extends Error
   final object NoSuchScreening    extends Error
