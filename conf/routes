@@ -13,3 +13,5 @@ GET     /assets/*file               controllers.Assets.versioned(path="/public",
 GET     /screenings                 controllers.HomeController.screenings(date, from, to)
 GET     /screenings/:id             controllers.HomeController.getScreening(id: String)
 POST    /screenings/:id             controllers.HomeController.postScreening(id: String)
+
+POST    /test/initDB                controllers.HomeController.initDB()

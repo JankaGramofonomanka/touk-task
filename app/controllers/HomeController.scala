@@ -10,6 +10,7 @@ import play.modules.reactivemongo.ReactiveMongoApi
 import lib.Data._
 import lib.Server
 import lib.DBInterface
+import lib.DBInit
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
@@ -22,6 +23,7 @@ class HomeController @Inject()(
 ) extends BaseController {
 
   val server = new Server(new DBInterface(api))
+  val dbInitializer = new DBInit(api)
 
   /**
    * Create an Action to render an HTML page.
@@ -59,4 +61,13 @@ class HomeController @Inject()(
     } yield responseFromEither(result)
   }
 
+  // ----------------------------------------------------------------------------------------------
+  def initDB() = Action.async(parse.json) {
+    implicit request => for {
+      result <- dbInitializer.initDB(request.body).value
+    } yield result match {
+      case Left(error)  => errorResponse(error)
+      case Right(_)     => Ok("done!")
+    }
+  }
 }

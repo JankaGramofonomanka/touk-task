@@ -98,6 +98,13 @@ class Server(dbInterface: DBInterface) {
     case _ => None
   }
 
+  def nameValid(name: String): Boolean = name.forall(_.isLetter) && name.length >= 3
+
+  def surnameValid(surname: String): Boolean = {
+    val segments = surname.split("-")
+    segments.length <= 2 && segments.forall(w => w.forall(_.isLetter) && w.length >= 1)
+  }
+
 
   // Processing of data from the database ---------------------------------------------------------
   def getAvailableSeats(
@@ -156,14 +163,6 @@ class Server(dbInterface: DBInterface) {
     moreInfo    <- screeningInfo(info)
 
   } yield moreInfo
-
-
-  def nameValid(name: String): Boolean = name.forall(_.isLetter) && name.length >= 3
-
-  def surnameValid(surname: String): Boolean = {
-    val segments = surname.split("-")
-    segments.length <= 2 && segments.forall(w => w.forall(_.isLetter) && w.length >= 1)
-  }
 
   def validateReservation(
     reservation: Reservation,
