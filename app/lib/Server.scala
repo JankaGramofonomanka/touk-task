@@ -65,7 +65,7 @@ class Server(dbInterface: DBInterface) {
       name    <- jsonName   .asOpt[String]
       surname <- jsonSurname.asOpt[String]
 
-      reserver = Person(name, surname)
+      reserver = Person(name.capitalize, surname.split("-").map(_.capitalize).mkString("-"))
 
       seatReservationList: List[(Seat, TicketType)] <- jsonSeats match {
         case JsArray(array) => array.toList.map(processSeatReservation(_)).sequence
@@ -157,6 +157,14 @@ class Server(dbInterface: DBInterface) {
 
   } yield moreInfo
 
+
+  def nameValid(name: String): Boolean = name.forall(_.isLetter) && name.length >= 3
+
+  def surnameValid(surname: String): Boolean = {
+    val segments = surname.split("-")
+    segments.length <= 2 && segments.forall(w => w.forall(_.isLetter) && w.length >= 1)
+  }
+
   def validateReservation(
     reservation: Reservation,
   ): EitherT[Future, Error, DateTime] = for {
@@ -172,6 +180,15 @@ class Server(dbInterface: DBInterface) {
       DateTime.now() < expirationDate,
       (),
       TooLateForReservation: Error
+    )
+
+    // Seats are in range
+    rowNumValid   = (seat: Seat) => 1 <= seat.row && seat.row     <= takenSeats.dim.numRows
+    seatNumValid  = (seat: Seat) => 1 <= seat.row && seat.column  <= takenSeats.dim.numColumns
+    _ <- EitherT.cond[Future](
+      reservation.seats.keys.forall(seat => rowNumValid(seat) && seatNumValid(seat)),
+      (),
+      SeatOutOfRange: Error
     )
 
     // Seats are not already reserved
@@ -191,6 +208,10 @@ class Server(dbInterface: DBInterface) {
       (),
       SeatsNotConnected: Error
     )
+
+    // name and surname are valid
+    _ <- EitherT.cond[Future](nameValid   (reservation.reserver.name),    (), InvalidName:    Error)
+    _ <- EitherT.cond[Future](surnameValid(reservation.reserver.surname), (), InvalidSurname: Error)
 
   } yield expirationDate
 
