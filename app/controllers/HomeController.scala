@@ -4,7 +4,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import javax.inject._
 import play.api.mvc._
-import play.api.libs.json._
 
 import play.modules.reactivemongo.ReactiveMongoApi
 
@@ -41,20 +40,14 @@ class HomeController @Inject()(
   def screenings(date: String, from: String, to: String) = Action.async {
     _ => for {
       result <- server.serveListScreeningsRequest(date, from, to).value
-    } yield result match {
-      case Left(error)  => errorResponse(error)
-      case Right(infos)  => Ok(infos)
-    }
+    } yield responseFromEither(result)
   }
 
   // ----------------------------------------------------------------------------------------------
   def getScreening(screeningId: String) = Action.async {
     _ => for {
       result <- server.serveScreeningInfoRequst(screeningId).value
-    } yield result match {
-      case Left(error)  => errorResponse(error)
-      case Right(info)  => Ok(info)
-    }
+    } yield responseFromEither(result)
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -63,12 +56,7 @@ class HomeController @Inject()(
 
       result <- server.serveReservationRequest(screeningId, request.body).value
 
-    } yield result match {
-      case Left(error) => errorResponse(error)
-      case Right(price) => Ok(Json.obj("price" -> price))
-    }
+    } yield responseFromEither(result)
   }
-
-
 
 }

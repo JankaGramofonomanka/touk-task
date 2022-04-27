@@ -58,7 +58,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ScreeningInfoBasic'
-        
+
         '400':
           description: Invalid paramteters
 
@@ -70,7 +70,7 @@ paths:
       summary: Information about the screening
       parameters:
         - $ref: '#/components/parameters/ScreeningId'
-      
+
       responses:
         '200':
           description: Information about a screening
@@ -78,10 +78,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ScreeningInfo'
-        
+
         '400':
           description: Invalid screeningId
-        
+
         '404':
           description: screening with given id does not exist
 
@@ -90,7 +90,7 @@ paths:
       summary: Reserves seats for the screening
       parameters:
         - $ref: '#/components/parameters/ScreeningId'
-      
+
       requestBody:
         description: reservation data
         required: true
@@ -107,11 +107,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReservationResult'
 
-        
+
         '400':
           description:
             invalid request body / reservation not successfull
-        
+
         '404':
           description: screening with given id does not exist
 
@@ -129,7 +129,7 @@ components:
       schema:
         $ref: '#/components/schemas/ScreeningId'
       required: true
-  
+
   # -- SCHEMAS ---------------------------------------------------------
   schemas:
     ScreeningId:
@@ -137,15 +137,15 @@ components:
       format: a 24-digit hexadecimal number
       description: Id of a screening
       example: a213cdaf3453bbfcf44423fa
-    
+
     Hour:
       type: string
-      format: HH:MM
+      format: "HH:mm"
       example: "16:30"
 
     Date:
       type: string
-      format: DD-MM-YYYY
+      format: "dd-MM-yyyy"
       example: "30-12-1983"
 
     ScreeningInfoBasic:
@@ -159,21 +159,21 @@ components:
       properties:
         screeningId:
           $ref: '#/components/schemas/ScreeningId'
-        
+
         title:
           type: string
           description: Title of a movie
           example: "Scarface"
-        
+
         start-time:
           $ref: '#/components/schemas/Hour'
 
-        
+
         duration:
           type: integer
           description: Duration of the screening in minutes
           example: 120
-    
+
     ScreeningInfo:
       allOf:
         - $ref: '#/components/schemas/ScreeningInfoBasic'
@@ -184,11 +184,11 @@ components:
             - rows
             - seats-per-row
             - availible-seats
-          
+
           properties:
             date:
               $ref: '#/components/schemas/Date'
-            
+
             room:
               type: integer
               description: Number of the screening room
@@ -198,7 +198,7 @@ components:
               type: integer
               description: Number of rows in the screening room
               example: 5
-            
+
             seats-per-row:
               type: integer
               description: Number of seats per row in the screening room
@@ -206,7 +206,7 @@ components:
 
             availible-seats:
               $ref: '#/components/schemas/SeatsInRoom'
-    
+
     SeatsInRow:
       type: array
       items:
@@ -260,41 +260,46 @@ components:
           {"row": 5, "seat": 13, "ticket": "child"},
           {"row": 5, "seat": 14, "ticket": "student"},
         ]
-    
+
     ReservationData:
       type: object
       required:
         - name
         - surname
         - seats
-      
+
       properties:
         name:
           type: string
           format:
             a string at least three characters long, containing only ofletters
           example: "John"
-        
+
         surname:
           type: string
           format:
             a string at least three characters long, consisting only of letters
             or of two parts, separated by a dash, each part consosting only of letters
           example: "Galt"
-        
+
         seats:
           allOf:
             - $ref: '#/components/schemas/SeatDict'
             - format: a non-empty array
 
-    
+
     ReservationResult:
       type: object
       required:
         - price
-      
+        - expiration-date
+
       properties:
         price:
           type: number
           description: total price of all reserved tickets
           example: 55.5
+
+        expiration-date:
+          type: string
+          format: "dd-MM-yyyy HH:mm"

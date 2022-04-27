@@ -166,19 +166,29 @@ class Server(dbInterface: DBInterface) {
   def validateReservation(
     screeningId: ScreeningId,
     reservation: Reservation,
-  ): EitherT[Future, Error, Unit] = for {
+  ): EitherT[Future, Error, DateTime] = for {
 
     info        <- dbInterface.getScreeningInfo(screeningId)
     takenSeats  <- getTakenSeats(screeningId, info.room)
 
     requestedSeats = reservation.seats.keys.toList
 
+    // Not to late to reserve seats
+    expirationDate = info.start - 15.minutes
+    _ <- EitherT.cond[Future](
+      DateTime.now() < expirationDate,
+      (),
+      TooLateForReservation: Error
+    )
+
+    // Seats are not already reserved
     _ <- EitherT.cond[Future](
       takenSeats.seats.intersect(requestedSeats).isEmpty,
       (),
       SeatsAlreadyTaken: Error
     )
 
+    // No free seats between reserved seats
     takenSeatsAfterReservation = seatListToArray(
       takenSeats.dim,
       takenSeats.seats ++ requestedSeats
@@ -189,7 +199,7 @@ class Server(dbInterface: DBInterface) {
       SeatsNotConnected: Error
     )
 
-  } yield ()
+  } yield expirationDate
 
   def calculatePrice(reservation: Reservation): Double
     = reservation.seats.values.map(ticketPrice(_)).sum
@@ -197,7 +207,7 @@ class Server(dbInterface: DBInterface) {
   def serveReservationRequest(
     screeningIdStr: String,
     body:           JsValue,
-  ): EitherT[Future, Error, Double] = {
+  ): EitherT[Future, Error, JsObject] = {
     for {
 
       screeningId <- EitherT.fromEither[Future](
@@ -208,13 +218,14 @@ class Server(dbInterface: DBInterface) {
         InvalidBody: Error
       )
 
-      _ <- validateReservation(screeningId, reservation)
+      expirationDate <- validateReservation(screeningId, reservation)
 
       _ <- dbInterface.insertReservation(reservation)
 
       price = reservation.seats.values.map(ticketPrice(_)).sum
+      expirationDateStr = DateTimeFormat.forPattern("dd-MM-yyyy HH:mm").print(expirationDate)
 
-    } yield price
+    } yield Json.obj("price" -> price, "expiration-date" -> expirationDateStr)
   }
 
 

@@ -4,6 +4,7 @@ import scala.util.{Failure, Success, Try}
 import java.math.BigInteger
 
 import play.api.mvc._
+import play.api.libs.json._
 import play.api.mvc.Results._
 import com.github.nscala_time.time.Imports._
 import reactivemongo.bson.BSONObjectID
@@ -23,14 +24,15 @@ object Data {
 
 
   sealed trait Error
-  final object InvalidParameters  extends Error
-  final object SeatsAlreadyTaken  extends Error
-  final object SeatsNotConnected  extends Error
-  final object InconsistentData   extends Error
-  final object NoSuchScreening    extends Error
-  final object InvalidBody        extends Error
-  final object InvalidScreeningId extends Error
-  final object Unknown            extends Error
+  final object InvalidParameters      extends Error
+  final object SeatsAlreadyTaken      extends Error
+  final object SeatsNotConnected      extends Error
+  final object InconsistentData       extends Error
+  final object NoSuchScreening        extends Error
+  final object InvalidBody            extends Error
+  final object InvalidScreeningId     extends Error
+  final object Unknown                extends Error
+  final object TooLateForReservation  extends Error
 
 
   sealed trait TicketType
@@ -80,14 +82,20 @@ object Data {
 
 
   def errorResponse(error: Error): Result = error match {
-    case InvalidParameters  => Status(400)("invalid parameters")
-    case SeatsAlreadyTaken  => Status(400)("seats alredy taken")
-    case SeatsNotConnected  => Status(400)("seats left untaken between two reserved seats")
-    case InconsistentData   => Status(500)("inconsistent data")
-    case NoSuchScreening    => Status(404)("screening with given id does not exist")
-    case InvalidBody        => Status(400)("invalid request body")
-    case InvalidScreeningId => Status(400)("Invalid screeningId")
-    case Unknown            => Status(500)("unknown error")
+    case InvalidParameters      => Status(400)("invalid parameters")
+    case SeatsAlreadyTaken      => Status(400)("seats alredy taken")
+    case SeatsNotConnected      => Status(400)("seats left untaken between two reserved seats")
+    case InconsistentData       => Status(500)("inconsistent data")
+    case NoSuchScreening        => Status(404)("screening with given id does not exist")
+    case InvalidBody            => Status(400)("invalid request body")
+    case InvalidScreeningId     => Status(400)("Invalid screeningId")
+    case Unknown                => Status(500)("unknown error")
+    case TooLateForReservation  => Status(400)("too late for reservation")
+  }
+
+  def responseFromEither(either: Either[Error, JsValue]): Result = either match {
+    case Left(error) => errorResponse(error)
+    case Right(json) => Ok(json)
   }
 
   def stringToObjectID(str: String, ifFailure: Error): Either[Error, BSONObjectID] = {
