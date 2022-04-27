@@ -61,12 +61,12 @@ class DBInterface(api: ReactiveMongoApi) {
     )
 
     info <- EitherT.fromOption[Future](processScreeningBSON(doc), InconsistentData: Error)
-  } yield info._2
+  } yield info
 
   def getScreenings(
     from: DateTime,
     to:   DateTime,
-  ): EitherT[Future, Error, List[(ScreeningId, ScreeningInfo)]] = {
+  ): EitherT[Future, Error, List[ScreeningInfo]] = {
     val futureScreenings: Future[List[BSONDocument]] = for {
       db <- api.database
 
@@ -133,7 +133,7 @@ class DBInterface(api: ReactiveMongoApi) {
     case _              => None
   }
 
-  def processScreeningBSON(doc: BSONDocument): Option[(ScreeningId, ScreeningInfo)] = for {
+  def processScreeningBSON(doc: BSONDocument): Option[ScreeningInfo] = for {
 
     bsonId    <- doc.get("_id")
     bsonTitle <- doc.get("title")
@@ -149,9 +149,7 @@ class DBInterface(api: ReactiveMongoApi) {
 
     duration = new Duration(start, end)
 
-    info = ScreeningInfo(title, start, duration, room)
-
-  } yield (id, info)
+  } yield ScreeningInfo(id, title, start, duration, room)
 
   def processRoomBSON(doc: BSONDocument): Option[RoomDimension] = for {
     bsonRows        <- doc.get("rows")

@@ -48,6 +48,7 @@ object Data {
   final case class Person(name: String, surname: String)
 
   final case class ScreeningInfo(
+    id:       ScreeningId,
     title:    String,
     start:    DateTime,
     duration: Duration,

@@ -24,7 +24,7 @@ paths:
 
     # ------------------------------------------------------------------
     get:
-      summary: Lists availible screenings
+      summary: Lists available screenings
       parameters:
         - name: date
           in: query
@@ -183,7 +183,7 @@ components:
             - room
             - rows
             - seats-per-row
-            - availible-seats
+            - available-seats
 
           properties:
             date:
@@ -204,7 +204,7 @@ components:
               description: Number of seats per row in the screening room
               example: 10
 
-            availible-seats:
+            available-seats:
               $ref: '#/components/schemas/SeatsInRoom'
 
     SeatsInRow:

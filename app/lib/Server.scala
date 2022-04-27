@@ -19,30 +19,23 @@ class Server(dbInterface: DBInterface) {
 
 
   // Response preparation -------------------------------------------------------------------------
-  def screeningInfoBasic(screeningId: ScreeningId, info: ScreeningInfo): JsObject = {
+  def screeningInfoBasic(info: ScreeningInfo): JsObject = {
     val startHour   = info.start.toLocalTime.getHourOfDay
     val startMinute = info.start.toLocalTime.getMinuteOfHour
 
     Json.obj(
-      "screeningId" -> objectIdToString(screeningId),
+      "screeningId" -> objectIdToString(info.id),
       "title"       -> info.title,
       "start-time"  -> f"$startHour%02d:$startMinute%02d",
       "duration"    -> info.duration.toStandardMinutes.getMinutes,
     )
   }
 
-  def screeningInfo(
-    screeningId:  ScreeningId,
-    info:         ScreeningInfo,
-  ): EitherT[Future, Error, JsObject] = for {
+  def screeningInfo(info: ScreeningInfo): EitherT[Future, Error, JsObject] = for {
 
+    availableSeats <- getAvailableSeats(info.id, info.room)
 
-    availableSeats <- getAvailableSeats(
-      screeningId,
-      info.room,
-    )
-
-    basicInfo = screeningInfoBasic(screeningId, info)
+    basicInfo = screeningInfoBasic(info)
 
     date = DateTimeFormat.forPattern("dd-MM-yyyy").print(info.start)
 
@@ -52,7 +45,7 @@ class Server(dbInterface: DBInterface) {
       + ("room" -> Json.toJson(info.room))
       + ("rows" -> Json.toJson(availableSeats.dim.numRows))
       + ("seats-per-row" -> Json.toJson(availableSeats.dim.numColumns))
-      + ("availible-seats" -> Json.toJson(availableSeats.seats))
+      + ("available-seats" -> Json.toJson(availableSeats.seats))
     )
 
   } yield result
@@ -151,7 +144,8 @@ class Server(dbInterface: DBInterface) {
       to    <- EitherT.fromOption[Future](tryTo   .toOption, InvalidParameters)
 
       screenings <- dbInterface.getScreenings(from, to)
-      screeningInfos = screenings.map(t => screeningInfoBasic(t._1, t._2))
+      screeningsSorted = screenings.sortBy(info => (info.title, info.duration))
+      screeningInfos = screeningsSorted.map(screeningInfoBasic(_))
     } yield Json.toJson(screeningInfos)
   }
 
@@ -159,17 +153,16 @@ class Server(dbInterface: DBInterface) {
 
     screeningId <- EitherT.fromEither[Future](stringToObjectID(idStr, InvalidScreeningId))
     info        <- dbInterface.getScreeningInfo(screeningId)
-    moreInfo    <- screeningInfo(screeningId, info)
+    moreInfo    <- screeningInfo(info)
 
   } yield moreInfo
 
   def validateReservation(
-    screeningId: ScreeningId,
     reservation: Reservation,
   ): EitherT[Future, Error, DateTime] = for {
 
-    info        <- dbInterface.getScreeningInfo(screeningId)
-    takenSeats  <- getTakenSeats(screeningId, info.room)
+    info        <- dbInterface.getScreeningInfo(reservation.screening)
+    takenSeats  <- getTakenSeats(reservation.screening, info.room)
 
     requestedSeats = reservation.seats.keys.toList
 
@@ -218,7 +211,7 @@ class Server(dbInterface: DBInterface) {
         InvalidBody: Error
       )
 
-      expirationDate <- validateReservation(screeningId, reservation)
+      expirationDate <- validateReservation(reservation)
 
       _ <- dbInterface.insertReservation(reservation)
 
