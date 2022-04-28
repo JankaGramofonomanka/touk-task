@@ -43,17 +43,26 @@ database and replace the `mongodb.uri` value with the url by which you will
 connect to your database.
 the url should be of the format:
 `"mongodb+srv://<USERNAME>:<PASSWORD>@<CLUSTER-ADDRESS>/<DATABASE-NAME>"`
-After that, you will need to recompile the project
+After that, you will need to recompile the project 
+(reload sbt if you are in the sbt shell).
 
 
 ## Demo
-To run the demo, execute the following:
+The demo is availible in 2 versions: interactive and non-interactive
+To run the non-interactive demo, execute the following:
 ```
 ./scripts/demo.sh
+```
+
+To run the interactive demo, execute the following:
+```
+./scripts/demo_interactive.sh
 ```
 
 The demo is making use of the `jq` command, you can install it with:
 ```
 sudo install jq
 ```
+
+
 
