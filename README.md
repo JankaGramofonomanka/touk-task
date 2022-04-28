@@ -7,11 +7,26 @@ This is my solution to a recruitment task, which is described in
 The application will be implemented with accordance to the API defined in 
 `touk-task-api.yaml`
 
-## Assumptions
+## Prerequisites
+To build and run the project you will need the `sbt` tool
+(https://www.scala-sbt.org/download.html)
+
+There is a demo, which requires the `jq` tool to run it, you can install it with:
+```
+sudo install jq
+```
+
+
+## Additional assumptions
 - All screenings end before 12:00 PM.
 - Screening rooms are rectangular, that is all rows have the same number of seats
 - The expiration time of a reservation, is equal to the time when reservations 
   are no longer possible (15 minutes before the screening).
+
+## Comments
+- There is a `test/initDB` endpoint, which is not part of the API, and it is a 
+  makeshift tool to initialize the database. This endpoint does not follow good
+  practices, in particular it is not idempotent.
 
 ## Build and run
 To build and run the project enter the project directory and executing the following:
@@ -39,13 +54,17 @@ The initialization of the database is done using the `/test/initDB` endpoint of
 the app, therefore it is important that the app is running while the script is 
 being executed.
 
+## Database
 If you wish to look into the database itself, you can set up your own MongoDB 
 database and replace the `mongodb.uri` value with the url by which you will
 connect to your database.
 the url should be of the format:
 `"mongodb+srv://<USERNAME>:<PASSWORD>@<CLUSTER-ADDRESS>/<DATABASE-NAME>"`
 After that, you will need to recompile the project 
-(reload sbt if you are in the sbt shell).
+(restart `sbt` if you are in the `sbt` shell).
+
+Before running the app you should create 3 collections named 
+`rooms`, `screenings` and `reservations`.
 
 
 ## Demo
