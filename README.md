@@ -1,7 +1,8 @@
 # TouK task
 
 ## About
-This is my solution to a recruitment task
+This is my solution to a recruitment task, which is described in 
+`task_description.pdf`
 
 The application will be implemented with accordance to the API defined in 
 `touk-task-api.yaml`
