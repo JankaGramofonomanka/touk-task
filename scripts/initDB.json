@@ -1,0 +1,82 @@
+{
+    "date": "30-04-2022",
+
+    "rooms": [
+        { "room-id": "A", "rows": 15, "seats-per-row": 20 },
+        { "room-id": "B", "rows": 10, "seats-per-row": 15 },
+        { "room-id": "C", "rows": 10, "seats-per-row": 10 }
+    ],
+
+
+    "screenings": [
+        {
+            "title":    "Fast & Furious 24",
+            "start":    "15:00",
+            "duration": 106,
+            "room-id":  "A"
+        },
+
+        {
+            "title":    "Scarface",
+            "start":    "17:00",
+            "duration": 170,
+            "room-id":  "A"
+        },
+
+        {
+            "title":    "Kapitan Bomba: Zemsta Faraona",
+            "start":    "08:00",
+            "duration": 80,
+            "room-id":  "A"
+        },
+
+        {
+            "title":    "Sharkonado",
+            "start":    "10:00",
+            "duration": 90,
+            "room-id":  "A"
+        },
+
+        {
+            "title":    "Super rekiny kontra więźniarki",
+            "start":    "12:00",
+            "duration": 84,
+            "room-id":  "A"
+        },
+
+        {
+            "title":    "Shrek",
+            "start":    "12:30",
+            "duration": 95,
+            "room-id":  "B"
+        },
+
+        {
+            "title":    "Shrek",
+            "start":    "14:30",
+            "duration": 95,
+            "room-id":  "B"
+        },
+
+        {
+            "title":    "Shrek",
+            "start":    "16:30",
+            "duration": 95,
+            "room-id":  "B"
+        },
+
+        {
+            "title":    "12 Angry Men",
+            "start":    "16:00",
+            "duration": 96,
+            "room-id":  "C"
+        },
+
+        {
+            "title":    "Pulp Fiction",
+            "start":    "18:00",
+            "duration": 154,
+            "room-id":  "C"
+        }
+    ]
+}
