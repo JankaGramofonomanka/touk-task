@@ -1,0 +1,305 @@
+openapi: 3.0.0
+info:
+  description: |
+    An API for an application for reserving seats in a cinema
+  version: "1.0.0"
+  title: touk-task-api 
+  termsOfService: 'http://swagger.io/terms/'
+  contact:
+    email: janserwatka@outlook.io
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/JankaGramofonomanka/touk-task-api/1.0.0
+
+
+
+# -- PATHS ---------------------------------------------------------------------
+paths:
+
+  /screenings:
+  
+    # ------------------------------------------------------------------
+    get:
+      summary: Lists available screenings
+      parameters:
+        - name: date
+          in: query
+          description: day of the screenings
+          schema:
+            $ref: '#/components/schemas/Date'
+          
+        - name: from
+          in: query
+          description: 
+            beginning of the time interval in which the listed screenings 
+            take place
+          schema:
+            $ref: '#/components/schemas/Hour'
+            
+        - name: to
+          in: query
+          description: 
+            end of the time interval in which the listed screenings take place
+          schema:
+            $ref: '#/components/schemas/Hour'
+            
+          required: true
+          
+      responses:
+        '200':
+          description: List of screenings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScreeningInfoBasic'
+        
+        '400':
+          description: Invalid paramteters
+                  
+    
+  /screenings/{screeningId}:
+  
+    # ------------------------------------------------------------------
+    get:
+      summary: Information about the screening
+      parameters:
+        - $ref: '#/components/parameters/ScreeningId'
+      
+      responses:
+        '200':
+          description: Information about a screening
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScreeningInfo'
+        
+        '400':
+          description: Invalid screeningId
+        
+        '404': 
+          description: screening with given id does not exist
+        
+    # ------------------------------------------------------------------
+    post:
+      summary: Reserves seats for the screening
+      parameters:
+        - $ref: '#/components/parameters/ScreeningId'
+      
+      requestBody:
+        description: reservation data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationData'
+        
+      responses:
+        '200':
+          description: reservation succesfull
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResult'
+              
+        
+        '400': 
+          description: 
+            invalid request body / reservation not successfull
+        
+        '404': 
+          description: screening with given id does not exist
+        
+
+
+
+# -- COMPONENTS ----------------------------------------------------------------
+components:
+
+  # -- PARAMETERS ------------------------------------------------------
+  parameters:
+    ScreeningId:
+      name: screeningId
+      in: path
+      schema:
+        $ref: '#/components/schemas/ScreeningId'
+      required: true
+  
+  # -- SCHEMAS ---------------------------------------------------------
+  schemas:
+    ScreeningId:
+      type: string
+      format: a 24-digit hexadecimal number
+      description: Id of a screening
+      example: a213cdaf3453bbfcf44423fa
+    
+    Hour:
+      type: string
+      format: "HH:mm"
+      example: "16:30"
+      
+    Date:
+      type: string
+      format: "dd-MM-yyyy"
+      example: "30-12-1983"
+
+    ScreeningInfoBasic:
+      type: object
+      required:
+        - screeningId
+        - title
+        - start-time
+        - duration
+        
+      properties:
+        screeningId:
+          $ref: '#/components/schemas/ScreeningId'
+        
+        title:
+          type: string
+          description: Title of a movie
+          example: "Scarface"
+        
+        start-time:
+          $ref: '#/components/schemas/Hour'
+              
+        
+        duration:
+          type: integer
+          description: Duration of the screening in minutes
+          example: 120
+    
+    ScreeningInfo:
+      allOf:
+        - $ref: '#/components/schemas/ScreeningInfoBasic'
+        - type: object
+          required:
+            - date
+            - room
+            - rows
+            - seats-per-row
+            - available-seats
+          
+          properties:
+            date:
+              $ref: '#/components/schemas/Date'
+            
+            room:
+              type: string
+              description: Name of the screening room
+              example: "A"
+              
+            rows:
+              type: integer
+              description: Number of rows in the screening room
+              example: 5
+            
+            seats-per-row:
+              type: integer
+              description: Number of seats per row in the screening room
+              example: 10
+              
+            available-seats:
+              $ref: '#/components/schemas/SeatsInRoom'
+    
+    SeatsInRow:
+      type: array
+      items:
+        type: integer
+      
+      description: array of available seat numbers in the row
+      example: [1, 2, 3, 8, 9, 10]
+    
+    SeatsInRoom:
+      type: array
+      items:
+        $ref: '#/components/schemas/SeatsInRow'
+          
+      description: an array of rows of available seats
+      example: 
+        [
+          [1, 2, 10],
+          [1, 2, 3, 8, 9, 10],
+          [1, 2, 3, 7, 8, 9, 10],
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        ]
+    
+    SeatDict:
+      type: array
+      items:
+        type: object
+        required:
+          - row
+          - seat
+          - ticket
+        
+        properties:
+          row:
+            type: integer
+            
+          seat:
+            type: integer
+          
+          ticket:
+            type: string
+            enum:
+              - adult
+              - student
+              - child
+        
+      example: 
+        [
+          {"row": 5, "seat": 11, "ticket": "adult"},
+          {"row": 5, "seat": 12, "ticket": "adult"},
+          {"row": 5, "seat": 13, "ticket": "child"},
+          {"row": 5, "seat": 14, "ticket": "student"},
+        ]
+    
+    ReservationData:
+      type: object
+      required:
+        - name
+        - surname
+        - seats
+      
+      properties:
+        name:
+          type: string
+          format: 
+            a string at least three characters long, containing only ofletters
+          example: "John"
+        
+        surname:
+          type: string
+          format: 
+            a string at least three characters long, consisting only of letters 
+            or of two parts, separated by a dash, each part consosting only of letters
+          example: "Galt"
+        
+        seats:
+          allOf:
+            - $ref: '#/components/schemas/SeatDict'
+            - format: a non-empty array
+              
+    
+    ReservationResult:
+      type: object
+      required:
+        - price
+        - expiration-date
+      
+      properties:
+        price:
+          type: number
+          description: total price of all reserved tickets
+          example: 55.5
+        
+        expiration-date:
+          type: string
+          format: "dd-MM-yyyy HH:mm"

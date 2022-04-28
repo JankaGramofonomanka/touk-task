@@ -1,0 +1,55 @@
+[
+    {
+        "name": "Eddie",
+        "surname": "Van-Halen",
+        "seats": [
+            {
+                "row": 4,
+                "seat": 5,
+                "ticket": "child"
+            },
+            
+            {
+                "row": 5,
+                "seat": 5,
+                "ticket": "child"
+            },
+            
+            {
+                "row": 5,
+                "seat": 6,
+                "ticket": "child"
+            },
+
+            {
+                "row": 5,
+                "seat": 7,
+                "ticket": "child"
+            }
+        ]
+    },
+
+    {
+        "name": "Ray",
+        "surname": "Charles",
+        "seats": [
+            {
+                "row": 5,
+                "seat": 5,
+                "ticket": "adult"
+            }
+        ]
+    },
+
+    {
+        "name": "Urlich",
+        "surname": "Von-Jungingen",
+        "seats": [
+            {
+                "row": 5,
+                "seat": 1,
+                "ticket": "adult"
+            }
+        ]
+    }
+]

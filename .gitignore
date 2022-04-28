@@ -1,0 +1,6 @@
+.metals
+.vscode
+logs
+target
+.bsp
+.idea
