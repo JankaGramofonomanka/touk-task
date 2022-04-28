@@ -181,6 +181,13 @@ class Server(dbInterface: DBInterface) {
       TooLateForReservation: Error
     )
 
+    // There is at least one seat being booked
+    _ <- EitherT.cond[Future](
+      !reservation.seats.isEmpty,
+      (),
+      EmptyReservation: Error
+    )
+
     // Seats are in range
     rowNumValid   = (seat: Seat) => 1 <= seat.row && seat.row     <= takenSeats.dim.numRows
     seatNumValid  = (seat: Seat) => 1 <= seat.row && seat.column  <= takenSeats.dim.numColumns

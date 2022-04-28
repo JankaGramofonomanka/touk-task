@@ -36,6 +36,7 @@ object Data {
   final object InvalidName            extends Error
   final object InvalidSurname         extends Error
   final object SeatOutOfRange         extends Error
+  final object EmptyReservation       extends Error
 
 
   sealed trait TicketType
@@ -92,12 +93,13 @@ object Data {
     case InconsistentData       => Status(500)("inconsistent data")
     case NoSuchScreening        => Status(404)("screening with given id does not exist")
     case InvalidBody            => Status(400)("invalid request body")
-    case InvalidScreeningId     => Status(400)("Invalid screeningId")
+    case InvalidScreeningId     => Status(400)("invalid screeningId")
     case Unknown                => Status(500)("unknown error")
     case TooLateForReservation  => Status(400)("too late for reservation")
     case InvalidName            => Status(400)("invalid name")
     case InvalidSurname         => Status(400)("invalid surname")
     case SeatOutOfRange         => Status(400)("row or seat number out of range")
+    case EmptyReservation       => Status(400)("empty reservation")
   }
 
   def responseFromEither(either: Either[Error, JsValue]): Result = either match {
